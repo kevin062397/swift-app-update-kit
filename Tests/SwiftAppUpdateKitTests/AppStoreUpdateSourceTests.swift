@@ -1,0 +1,219 @@
+//
+//  AppStoreUpdateSourceTests.swift
+//  SwiftAppUpdateKitTests
+//
+//  Created by Haoyuan Xia on 8/26/26.
+//
+
+import Foundation
+import Testing
+
+@testable import SwiftAppUpdateKit
+
+struct AppStoreUpdateSourceTests {
+    // MARK: - Test helpers
+
+    private actor MockSession {
+        private(set) var capturedRequests: [URLRequest] = []
+        private var responses: [Result<(Data, URLResponse), any Error>]
+
+        init(_ responses: [Result<(Data, URLResponse), any Error>]) {
+            self.responses = responses
+        }
+
+        func send(_ request: URLRequest) throws -> (Data, URLResponse) {
+            self.capturedRequests.append(request)
+            guard !self.responses.isEmpty else { throw URLError(.badServerResponse) }
+            return try self.responses.removeFirst().get()
+        }
+    }
+
+    private func httpResponse(statusCode: Int) -> HTTPURLResponse {
+        HTTPURLResponse(
+            url: URL(string: "https://itunes.apple.com/lookup")!,
+            statusCode: statusCode,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        )!
+    }
+
+    private var validResponseData: Data {
+        Data(
+            """
+            {
+                "resultCount": 1,
+                "results": [{
+                    "trackId": 1234567890,
+                    "bundleId": "com.example.app",
+                    "version": "1.5.0",
+                    "minimumOsVersion": "17.0",
+                    "currentVersionReleaseDate": "2026-08-14T07:00:00Z",
+                    "trackViewUrl": "https://apps.apple.com/us/app/example-app/id1234567890",
+                    "fileSizeBytes": "44039168"
+                }]
+            }
+            """.utf8
+        )
+    }
+
+    private func queryItems(from request: URLRequest) -> [URLQueryItem] {
+        guard let url = request.url else { return [] }
+        return URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+    }
+
+    // MARK: - URL construction
+
+    @Test func lookupURLAlwaysIncludesBundleIdentifier() async {
+        let session = MockSession([.success((Data(), httpResponse(statusCode: 404)))])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+
+        let requests = await session.capturedRequests
+        let items = requests.first.map { self.queryItems(from: $0) } ?? []
+        #expect(items.contains(URLQueryItem(name: "bundleId", value: "com.example.app")))
+    }
+
+    @Test func lookupURLOmitsCountryWhenStorefrontIsNil() async {
+        let session = MockSession([.success((Data(), httpResponse(statusCode: 404)))])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+
+        let requests = await session.capturedRequests
+        let items = requests.first.map { self.queryItems(from: $0) } ?? []
+        #expect(!items.contains(where: { $0.name == "country" }))
+    }
+
+    @Test func lookupURLIncludesCountryWhenStorefrontIsProvided() async {
+        let session = MockSession([.success((Data(), httpResponse(statusCode: 404)))])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: "JP")
+
+        let requests = await session.capturedRequests
+        let items = requests.first.map { self.queryItems(from: $0) } ?? []
+        #expect(items.contains(URLQueryItem(name: "country", value: "JP")))
+    }
+
+    @Test func requestBypassesURLCache() async {
+        let session = MockSession([.success((Data(), httpResponse(statusCode: 404)))])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+
+        let requests = await session.capturedRequests
+        #expect(requests.first?.cachePolicy == .reloadIgnoringLocalAndRemoteCacheData)
+    }
+
+    // MARK: - Retry policy
+
+    @Test func transportFailureIsRetried() async {
+        let session = MockSession([
+            .failure(URLError(.notConnectedToInternet)),
+            .success((self.validResponseData, self.httpResponse(statusCode: 200))),
+        ])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+
+        let requestCount = await session.capturedRequests.count
+        #expect(requestCount == 2)
+    }
+
+    @Test func serverErrorAbove500IsRetried() async {
+        let session = MockSession([
+            .success((Data(), self.httpResponse(statusCode: 503))),
+            .success((self.validResponseData, self.httpResponse(statusCode: 200))),
+        ])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+
+        let requestCount = await session.capturedRequests.count
+        #expect(requestCount == 2)
+    }
+
+    @Test func serverErrorBelow500IsNotRetried() async {
+        let session = MockSession([
+            .success((Data(), self.httpResponse(statusCode: 404)))
+        ])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+
+        var thrownError: LookupRequestError?
+        do {
+            _ = try await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+        } catch {
+            thrownError = error
+        }
+
+        #expect(thrownError == .serverError(statusCode: 404))
+        let requestCount = await session.capturedRequests.count
+        #expect(requestCount == 1)
+    }
+
+    @Test func decodingFailureIsNotRetried() async {
+        let truncatedPayload = Data("{}".utf8)
+        let session = MockSession([
+            .success((truncatedPayload, self.httpResponse(statusCode: 200)))
+        ])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+
+        var thrownError: LookupRequestError?
+        do {
+            _ = try await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+        } catch {
+            thrownError = error
+        }
+
+        #expect(thrownError == .malformedResponse)
+        let requestCount = await session.capturedRequests.count
+        #expect(requestCount == 1)
+    }
+
+    @Test func secondAttemptFailureIsPropagated() async {
+        let session = MockSession([
+            .failure(URLError(.notConnectedToInternet)),
+            .failure(URLError(.notConnectedToInternet)),
+        ])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+
+        var thrownError: LookupRequestError?
+        do {
+            _ = try await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+        } catch {
+            thrownError = error
+        }
+
+        #expect(thrownError == .networkUnreachable)
+        let requestCount = await session.capturedRequests.count
+        #expect(requestCount == 2)
+    }
+
+    @Test func successfulResponseDecodes() async throws {
+        let session = MockSession([
+            .success((self.validResponseData, self.httpResponse(statusCode: 200)))
+        ])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        let metadata = try await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: nil
+        )
+        #expect(metadata.version == AppVersion("1.5.0"))
+        #expect(metadata.trackID == 1_234_567_890)
+    }
+}
