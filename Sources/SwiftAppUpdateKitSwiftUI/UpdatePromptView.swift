@@ -58,10 +58,7 @@ public struct UpdatePromptView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 30.0) {
                     HStack(alignment: .center, spacing: 15.0) {
-                        // App icon placeholder — replaced with real artwork in Step 14.
-                        RoundedRectangle(cornerRadius: 22.0)
-                            .fill(Color(.placeholderText).opacity(0.5))
-                            .frame(width: 80.0, height: 80.0)
+                        AppIconView(artworkURL: self.description.metadata.artworkURL)
 
                         // Title, version transition, and optional download size.
                         VStack(alignment: .leading) {
