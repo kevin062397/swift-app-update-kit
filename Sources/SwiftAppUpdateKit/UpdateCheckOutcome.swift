@@ -63,4 +63,16 @@ public struct UpdateDescription: Equatable, Sendable {
     public let storeVersionString: String
     public let requirement: UpdateRequirement
     public let metadata: AppStoreMetadata
+
+    public init(
+        installedVersionString: String,
+        storeVersionString: String,
+        requirement: UpdateRequirement,
+        metadata: AppStoreMetadata
+    ) {
+        self.installedVersionString = installedVersionString
+        self.storeVersionString = storeVersionString
+        self.requirement = requirement
+        self.metadata = metadata
+    }
 }

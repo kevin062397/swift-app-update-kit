@@ -18,4 +18,26 @@ public struct AppStoreMetadata: Equatable, Sendable {
     public let releaseNotes: String?
     public let artworkURL: URL?
     public let fileSizeInBytes: Int?
+
+    public init(
+        trackID: Int,
+        versionString: String,
+        version: AppVersion,
+        minimumOperatingSystemVersion: AppVersion,
+        releaseDate: Date,
+        productPageURL: URL,
+        releaseNotes: String?,
+        artworkURL: URL?,
+        fileSizeInBytes: Int?
+    ) {
+        self.trackID = trackID
+        self.versionString = versionString
+        self.version = version
+        self.minimumOperatingSystemVersion = minimumOperatingSystemVersion
+        self.releaseDate = releaseDate
+        self.productPageURL = productPageURL
+        self.releaseNotes = releaseNotes
+        self.artworkURL = artworkURL
+        self.fileSizeInBytes = fileSizeInBytes
+    }
 }

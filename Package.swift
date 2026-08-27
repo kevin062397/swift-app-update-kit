@@ -14,7 +14,11 @@ let package = Package(
         .library(
             name: "SwiftAppUpdateKit",
             targets: ["SwiftAppUpdateKit"]
-        )
+        ),
+        .library(
+            name: "SwiftAppUpdateKitSwiftUI",
+            targets: ["SwiftAppUpdateKitSwiftUI"]
+        ),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -22,9 +26,17 @@ let package = Package(
         .target(
             name: "SwiftAppUpdateKit"
         ),
+        .target(
+            name: "SwiftAppUpdateKitSwiftUI",
+            dependencies: ["SwiftAppUpdateKit"]
+        ),
         .testTarget(
             name: "SwiftAppUpdateKitTests",
             dependencies: ["SwiftAppUpdateKit"]
+        ),
+        .testTarget(
+            name: "SwiftAppUpdateKitSwiftUITests",
+            dependencies: ["SwiftAppUpdateKit", "SwiftAppUpdateKitSwiftUI"]
         ),
     ],
     swiftLanguageModes: [.v6]
