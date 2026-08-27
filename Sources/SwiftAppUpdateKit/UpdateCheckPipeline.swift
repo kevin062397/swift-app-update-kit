@@ -7,7 +7,7 @@
 
 import Foundation
 
-// MARK: - Bundle metadata
+// MARK: - Bundle Metadata
 
 struct BundleMetadata {
     let bundleIdentifier: String

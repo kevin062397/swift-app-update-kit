@@ -196,7 +196,7 @@ struct UpdateCheckPipelineTests {
         }
     }
 
-    // MARK: - Gate 2: Production build
+    // MARK: - Gate 2: Production Build
 
     @Test func nonProductionBuildIsSuppressed() async throws {
         let store = InMemoryPromptStateStore()
@@ -214,7 +214,7 @@ struct UpdateCheckPipelineTests {
         #expect(await source.callCount == 0)
     }
 
-    // MARK: - Gate 3: Bundle metadata
+    // MARK: - Gate 3: Bundle Metadata
 
     @Test func missingBundleMetadataThrows() async throws {
         let store = InMemoryPromptStateStore()
@@ -236,7 +236,7 @@ struct UpdateCheckPipelineTests {
         }
     }
 
-    // MARK: - Gate 4 & 5: Network request and check time recording
+    // MARK: - Gate 4 & 5: Network Request and Check Time Recording
 
     @Test func failedRequestDoesNotRecordCheckTime() async throws {
         let store = InMemoryPromptStateStore()
@@ -269,7 +269,7 @@ struct UpdateCheckPipelineTests {
         #expect(checkDate == self.referenceDate)
     }
 
-    // MARK: - Gate 6: OS compatibility
+    // MARK: - Gate 6: OS Compatibility
 
     @Test func incompatibleStoreVersionIsSuppressed() async throws {
         let store = InMemoryPromptStateStore()
@@ -295,7 +295,7 @@ struct UpdateCheckPipelineTests {
         )
     }
 
-    // MARK: - Gate 7: Release age
+    // MARK: - Gate 7: Release Age
 
     @Test func tooRecentReleaseIsSuppressed() async throws {
         let store = InMemoryPromptStateStore()
@@ -322,7 +322,7 @@ struct UpdateCheckPipelineTests {
         )
     }
 
-    // MARK: - Gate 8: Version comparison
+    // MARK: - Gate 8: Version Comparison
 
     @Test func equivalentVersionsAreUpToDate() async throws {
         let store = InMemoryPromptStateStore()
@@ -409,7 +409,7 @@ struct UpdateCheckPipelineTests {
         #expect(description.requirement == .required)
     }
 
-    // MARK: - Gates 10 & 11: Skip and snooze (optional only)
+    // MARK: - Gates 10 & 11: Skip and Snooze (Optional Only)
 
     @Test func skippedOptionalVersionIsSuppressed() async throws {
         let store = InMemoryPromptStateStore()

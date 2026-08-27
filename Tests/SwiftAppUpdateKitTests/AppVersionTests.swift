@@ -10,7 +10,7 @@ import Testing
 @testable import SwiftAppUpdateKit
 
 struct AppVersionTests {
-    // MARK: - Ordering matrix: equivalent pairs
+    // MARK: - Ordering Matrix: Equivalent Pairs
 
     @Test(
         arguments: zip(
@@ -26,7 +26,7 @@ struct AppVersionTests {
         #expect(!(storeVersion < installedVersion))
     }
 
-    // MARK: - Ordering matrix: store ahead
+    // MARK: - Ordering Matrix: Store Ahead
 
     @Test(
         arguments: zip(
@@ -41,13 +41,13 @@ struct AppVersionTests {
         #expect(installedVersion != storeVersion)
     }
 
-    // MARK: - Ordering matrix: installed ahead
+    // MARK: - Ordering Matrix: Installed Ahead
 
     @Test func installedAhead() {
         #expect(AppVersion("1.0.0") > AppVersion(""))
     }
 
-    // MARK: - Hash consistency
+    // MARK: - Hash Consistency
 
     @Test(
         arguments: zip(

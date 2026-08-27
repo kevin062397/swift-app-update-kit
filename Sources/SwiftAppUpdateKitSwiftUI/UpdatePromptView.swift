@@ -143,7 +143,7 @@ public struct UpdatePromptView: View {
         .interactiveDismissDisabled()
     }
 
-    // MARK: - Internal Helpers (accessible via @testable import for testing)
+    // MARK: - Internal Helpers (Accessible via @testable Import for Testing)
 
     var titleText: String {
         self.description.requirement == .required ? self.strings.updateRequiredTitle : self.strings.updateAvailableTitle

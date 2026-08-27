@@ -7,7 +7,7 @@
 
 import Foundation
 
-// MARK: - Lookup request error
+// MARK: - Lookup Request Error
 
 /// A failure that occurred while fetching store metadata from the App Store Lookup API.
 enum LookupRequestError: Error, Equatable {
@@ -38,7 +38,7 @@ enum LookupRequestError: Error, Equatable {
     }
 }
 
-// MARK: - Update source protocol
+// MARK: - Update Source Protocol
 
 /// A source that fetches store metadata for a given bundle identifier.
 ///
@@ -52,7 +52,7 @@ protocol UpdateSource: Sendable {
     ) async throws(LookupRequestError) -> AppStoreMetadata
 }
 
-// MARK: - App Store update source
+// MARK: - App Store Update Source
 
 /// The production update source that queries the iTunes Lookup API.
 struct AppStoreUpdateSource: UpdateSource {

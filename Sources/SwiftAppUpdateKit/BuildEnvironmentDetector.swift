@@ -15,7 +15,7 @@ protocol BuildEnvironmentDetector: Sendable {
     func isProductionBuild() async -> Bool
 }
 
-// MARK: - Detection strategy
+// MARK: - Detection Strategy
 
 /// The build environment detection logic with injectable step functions, so every
 /// branch is testable without a real StoreKit session or a running debugger.
@@ -47,7 +47,7 @@ struct BuildEnvironmentDetectionStrategy {
     }
 }
 
-// MARK: - Production implementation
+// MARK: - Production Implementation
 
 /// The production build environment detector that queries StoreKit's app transaction
 /// and inspects the running process for simulator and debugger conditions.

@@ -14,7 +14,7 @@ import Observation
 @MainActor
 @Observable
 public final class UpdateChecker {
-    // MARK: - Observable state
+    // MARK: - Observable State
 
     /// The update that passed every gate on the most recent check, if any.
     ///
@@ -27,7 +27,7 @@ public final class UpdateChecker {
     /// The current presentation state of the pending update.
     public internal(set) var presentationState: PresentationState = .noPendingUpdate
 
-    // MARK: - Private state
+    // MARK: - Private State
 
     // Task<_, any Error> is required because Swift does not provide a Task initializer
     // that produces typed throws; the typed failure is widened to any Error at the call site.
@@ -90,7 +90,7 @@ public final class UpdateChecker {
         self.bundleMetadataProvider = bundleMetadataProvider
     }
 
-    // MARK: - Check entry points
+    // MARK: - Check Entry Points
 
     /// Runs a check without exposing failures to the caller, for use at launch.
     ///

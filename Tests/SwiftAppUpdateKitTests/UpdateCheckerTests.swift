@@ -158,7 +158,7 @@ private struct MockURLOpener: URLOpener {
         )
     }
 
-    // MARK: - Pending update and durability
+    // MARK: - Pending Update and Durability
 
     @Test func checkSetsPendingUpdateWhenUpdateIsAvailable() async throws {
         let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
@@ -263,7 +263,7 @@ private struct MockURLOpener: URLOpener {
         #expect(firstPending == secondPending)
     }
 
-    // MARK: - Presentation state
+    // MARK: - Presentation State
 
     @Test func checkSetsStateToAwaitingPermissionWhenUpdateIsAvailable() async throws {
         let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
@@ -309,7 +309,7 @@ private struct MockURLOpener: URLOpener {
         #expect(checker.presentationState == .presenting)
     }
 
-    // MARK: - Actions: snooze
+    // MARK: - Actions: Snooze
 
     @Test func snoozeWritesSnoozeExpiryForTheVersion() async throws {
         let store = InMemoryPromptStateStore()
@@ -349,7 +349,7 @@ private struct MockURLOpener: URLOpener {
         #expect(isSkipped == false)
     }
 
-    // MARK: - Actions: skip
+    // MARK: - Actions: Skip
 
     @Test func skipWritesPermanentSkipForTheVersion() async throws {
         let store = InMemoryPromptStateStore()
@@ -389,7 +389,7 @@ private struct MockURLOpener: URLOpener {
         #expect(snoozeExpiry == nil)
     }
 
-    // MARK: - Actions: update now
+    // MARK: - Actions: Update Now
 
     @Test func updateNowOpensAppStoreURLFirst() async throws {
         let urlRecord = URLOpenRecord(successSequence: [true])

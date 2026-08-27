@@ -71,7 +71,7 @@ struct UpdatePromptViewTests {
         #expect(self.makeSheet(requirement: .required).titleText == "Update Required")
     }
 
-    // MARK: - Download size
+    // MARK: - Download Size
 
     @Test func formattedFileSizeIsNilWhenAbsent() {
         #expect(self.makeSheet(fileSizeInBytes: nil).formattedFileSize == nil)
@@ -81,7 +81,7 @@ struct UpdatePromptViewTests {
         #expect(self.makeSheet(fileSizeInBytes: 44_039_168).formattedFileSize != nil)
     }
 
-    // MARK: - Release notes
+    // MARK: - Release Notes
 
     @Test func releaseNotesTextIsNilWhenAbsent() {
         #expect(self.makeSheet(releaseNotes: nil).releaseNotesText == nil)
@@ -104,7 +104,7 @@ struct UpdatePromptViewTests {
         #expect(self.makeSheet(releaseNotes: notes).releaseNotesText == notes)
     }
 
-    // MARK: - Custom strings
+    // MARK: - Custom Strings
 
     @Test func customStringOverridesTitle() {
         var strings = UpdatePromptStrings()

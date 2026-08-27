@@ -45,7 +45,7 @@ protocol PromptStateStore: Sendable {
     func pruneEntries(olderThan currentStoreVersion: AppVersion) async
 }
 
-// MARK: - User defaults-backed implementation
+// MARK: - User Defaults-Backed Implementation
 
 actor UserDefaultsPromptStateStore: PromptStateStore {
     private static let lastCheckDateKey = "com.swiftappupdatekit.lastCheckDate"
@@ -126,7 +126,7 @@ actor UserDefaultsPromptStateStore: PromptStateStore {
     }
 }
 
-// MARK: - In-memory fallback implementation
+// MARK: - In-Memory Fallback Implementation
 
 actor InMemoryPromptStateStore: PromptStateStore {
     private var storedLastCheckDate: Date?

@@ -11,7 +11,7 @@ import Testing
 @testable import SwiftAppUpdateKit
 
 struct AppStoreUpdateSourceTests {
-    // MARK: - Test helpers
+    // MARK: - Test Helpers
 
     private actor MockSession {
         private(set) var capturedRequests: [URLRequest] = []
@@ -61,7 +61,7 @@ struct AppStoreUpdateSourceTests {
         return URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
     }
 
-    // MARK: - URL construction
+    // MARK: - URL Construction
 
     @Test func lookupURLAlwaysIncludesBundleIdentifier() async {
         let session = MockSession([.success((Data(), httpResponse(statusCode: 404)))])
@@ -110,7 +110,7 @@ struct AppStoreUpdateSourceTests {
         #expect(requests.first?.cachePolicy == .reloadIgnoringLocalAndRemoteCacheData)
     }
 
-    // MARK: - Retry policy
+    // MARK: - Retry Policy
 
     @Test func transportFailureIsRetried() async {
         let session = MockSession([

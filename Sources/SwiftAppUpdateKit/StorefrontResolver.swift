@@ -18,7 +18,7 @@ protocol StorefrontResolver: Sendable {
     func resolveStorefrontCountryCode() async -> String?
 }
 
-// MARK: - Resolution strategy
+// MARK: - Resolution Strategy
 
 /// The storefront resolution logic with injectable step functions, so every
 /// branch of the fallback chain is testable without a real StoreKit session.
@@ -47,7 +47,7 @@ struct StorefrontResolutionStrategy {
     }
 }
 
-// MARK: - Production implementation
+// MARK: - Production Implementation
 
 /// The production storefront resolver that queries StoreKit and reads the
 /// device locale.

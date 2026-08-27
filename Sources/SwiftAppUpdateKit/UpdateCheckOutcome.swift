@@ -35,7 +35,7 @@ extension LookupRequestError {
     }
 }
 
-// MARK: - Suppression reason
+// MARK: - Suppression Reason
 
 public enum SuppressionReason: Equatable, Sendable {
     case nonProductionBuild
@@ -56,7 +56,7 @@ public enum UpdateCheckOutcome: Equatable, Sendable {
     case suppressed(SuppressionReason)
 }
 
-// MARK: - Update description
+// MARK: - Update Description
 
 public struct UpdateDescription: Equatable, Sendable {
     public let installedVersionString: String

@@ -7,7 +7,7 @@
 
 import Foundation
 
-// MARK: - Decode error
+// MARK: - Decode Error
 
 /// A failure that occurred while decoding an App Store Lookup API response.
 enum LookupDecodeError: Error, Equatable {
@@ -19,7 +19,7 @@ enum LookupDecodeError: Error, Equatable {
     case malformedResponse
 }
 
-// MARK: - Internal decodable types
+// MARK: - Internal Decodable Types
 
 private struct LookupResponse: Decodable {
     let resultCount: Int

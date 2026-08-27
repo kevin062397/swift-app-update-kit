@@ -10,7 +10,7 @@ import Testing
 @testable import SwiftAppUpdateKit
 
 struct StorefrontResolverTests {
-    // MARK: - Mapping table
+    // MARK: - Mapping Table
 
     @Test func storefrontCodeUSAMapsToUS() {
         #expect(StorefrontCountryCodeTable.countryCode(forThreeLetterStorefrontCode: "USA") == "US")
@@ -36,7 +36,7 @@ struct StorefrontResolverTests {
         #expect(StorefrontCountryCodeTable.countryCode(forThreeLetterStorefrontCode: "XYZ") == nil)
     }
 
-    // MARK: - Fallback chain
+    // MARK: - Fallback Chain
 
     @Test func storefrontCodeResolvedFromStoreKitThreeLetterCode() async {
         let strategy = StorefrontResolutionStrategy(

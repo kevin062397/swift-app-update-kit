@@ -15,7 +15,7 @@ struct PromptStateStoreTests {
     private let referenceDate = Date(timeIntervalSinceReferenceDate: 1_000_000)
     private let oneDayInSeconds: TimeInterval = 86400
 
-    // MARK: - Snooze expiry
+    // MARK: - Snooze Expiry
 
     @Test func snoozeExpiryIsReturnedForSnoozedVersion() async {
         let store = InMemoryPromptStateStore()
@@ -43,7 +43,7 @@ struct PromptStateStoreTests {
         #expect(result == nil)
     }
 
-    // MARK: - Clock-skew clamps
+    // MARK: - Clock-Skew Clamps
 
     @Test func snoozeExpiryBeyondOneIntervalInFutureIsClamped() async {
         let store = InMemoryPromptStateStore()
@@ -96,7 +96,7 @@ struct PromptStateStoreTests {
         #expect(result == pastDate)
     }
 
-    // MARK: - Skip persistence
+    // MARK: - Skip Persistence
 
     @Test func skippedVersionIsRecognizedAsSkipped() async {
         let store = InMemoryPromptStateStore()
@@ -172,7 +172,7 @@ struct PromptStateStoreTests {
         #expect(skip160 == true)
     }
 
-    // MARK: - In-memory fallback
+    // MARK: - In-Memory Fallback
 
     @Test func unavailableDefaultsSuiteFallsBackToInMemoryStoreWithoutCrashing() async {
         // UserDefaults.globalDomain ("NSGlobalDomain") cannot be opened as a suite,
