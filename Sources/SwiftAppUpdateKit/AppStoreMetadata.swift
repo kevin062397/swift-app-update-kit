@@ -8,14 +8,14 @@
 import Foundation
 
 /// The App Store metadata for a specific version of an app, decoded from the Lookup API response.
-struct AppStoreMetadata: Equatable {
-    let trackID: Int
-    let versionString: String
-    let version: AppVersion
-    let minimumOperatingSystemVersion: AppVersion
-    let releaseDate: Date
-    let productPageURL: URL
-    let releaseNotes: String?
-    let artworkURL: URL?
-    let fileSizeInBytes: Int?
+public struct AppStoreMetadata: Equatable, Sendable {
+    public let trackID: Int
+    public let versionString: String
+    public let version: AppVersion
+    public let minimumOperatingSystemVersion: AppVersion
+    public let releaseDate: Date
+    public let productPageURL: URL
+    public let releaseNotes: String?
+    public let artworkURL: URL?
+    public let fileSizeInBytes: Int?
 }

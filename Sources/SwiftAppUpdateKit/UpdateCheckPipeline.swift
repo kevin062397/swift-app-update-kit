@@ -29,13 +29,13 @@ struct BundleMetadata {
 
 // MARK: - Configuration
 
-struct UpdateCheckConfiguration {
-    let policy: UpdatePolicy
-    let throttleInterval: TimeInterval
-    let snoozeInterval: TimeInterval
-    let minimumReleaseAge: TimeInterval
+public struct UpdateCheckConfiguration: Sendable {
+    public let policy: UpdatePolicy
+    public let throttleInterval: TimeInterval
+    public let snoozeInterval: TimeInterval
+    public let minimumReleaseAge: TimeInterval
 
-    init(
+    public init(
         policy: UpdatePolicy,
         throttleInterval: TimeInterval = 86400,
         snoozeInterval: TimeInterval = 86400,

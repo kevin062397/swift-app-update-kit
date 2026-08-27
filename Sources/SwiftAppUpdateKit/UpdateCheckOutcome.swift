@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Failure
 
-enum UpdateCheckFailure: Error, Equatable {
+public enum UpdateCheckFailure: Error, Equatable, Sendable {
     case networkUnreachable
     case serverError(statusCode: Int)
     case malformedResponse
@@ -37,7 +37,7 @@ extension LookupRequestError {
 
 // MARK: - Suppression reason
 
-enum SuppressionReason: Equatable {
+public enum SuppressionReason: Equatable, Sendable {
     case nonProductionBuild
     case throttled(nextEligibleDate: Date)
     case incompatibleWithDeviceOS(requiredVersion: AppVersion, currentVersion: AppVersion)
@@ -49,7 +49,7 @@ enum SuppressionReason: Equatable {
 
 // MARK: - Outcome
 
-enum UpdateCheckOutcome: Equatable {
+public enum UpdateCheckOutcome: Equatable, Sendable {
     case updateAvailable(UpdateDescription)
     case upToDate
     case installedIsNewer
@@ -58,9 +58,9 @@ enum UpdateCheckOutcome: Equatable {
 
 // MARK: - Update description
 
-struct UpdateDescription: Equatable {
-    let installedVersionString: String
-    let storeVersionString: String
-    let requirement: UpdateRequirement
-    let metadata: AppStoreMetadata
+public struct UpdateDescription: Equatable, Sendable {
+    public let installedVersionString: String
+    public let storeVersionString: String
+    public let requirement: UpdateRequirement
+    public let metadata: AppStoreMetadata
 }
