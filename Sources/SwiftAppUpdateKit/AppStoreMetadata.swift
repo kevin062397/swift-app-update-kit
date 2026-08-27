@@ -8,8 +8,9 @@
 import Foundation
 
 /// The App Store metadata for a specific version of an app, decoded from the Lookup API response.
-struct AppStoreMetadata {
+struct AppStoreMetadata: Equatable {
     let trackID: Int
+    let versionString: String
     let version: AppVersion
     let minimumOperatingSystemVersion: AppVersion
     let releaseDate: Date

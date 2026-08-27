@@ -81,6 +81,7 @@ enum LookupResponseDecoder {
 
         return AppStoreMetadata(
             trackID: record.trackID,
+            versionString: record.version,
             version: AppVersion(record.version),
             minimumOperatingSystemVersion: AppVersion(record.minimumOperatingSystemVersion),
             releaseDate: releaseDate,
