@@ -34,6 +34,7 @@ struct UpdatePromptViewTests {
 
     private func makeSheet(
         requirement: UpdateRequirement = .optional,
+        strings: UpdatePromptStrings = UpdatePromptStrings(),
         releaseNotes: String? = "• Fixed a crash",
         fileSizeInBytes: Int? = 44_039_168,
         explanatoryMessage: String? = nil
@@ -48,6 +49,7 @@ struct UpdatePromptViewTests {
                     fileSizeInBytes: fileSizeInBytes
                 )
             ),
+            strings: strings,
             explanatoryMessage: explanatoryMessage,
             onUpdateNow: {},
             onLater: {},
@@ -100,5 +102,20 @@ struct UpdatePromptViewTests {
     @Test func releaseNotesTextPreservesContent() {
         let notes = "• Fixed a crash\n• Faster sync"
         #expect(self.makeSheet(releaseNotes: notes).releaseNotesText == notes)
+    }
+
+    // MARK: - Custom strings
+
+    @Test func customStringOverridesTitle() {
+        var strings = UpdatePromptStrings()
+        strings.updateAvailableTitle = "Get the Latest"
+        #expect(self.makeSheet(strings: strings).titleText == "Get the Latest")
+    }
+
+    @Test func overridingOneStringKeepsOthersAtTheirDefaults() {
+        var strings = UpdatePromptStrings()
+        strings.updateAvailableTitle = "Get the Latest"
+        // The required title should still be the default because only the available title was overridden.
+        #expect(self.makeSheet(requirement: .required, strings: strings).titleText == "Update Required")
     }
 }

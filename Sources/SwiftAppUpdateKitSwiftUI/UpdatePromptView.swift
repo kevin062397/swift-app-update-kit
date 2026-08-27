@@ -22,6 +22,7 @@ import SwiftUI
 /// only paths to dismissal, while the required variant offers only "Update Now".
 public struct UpdatePromptView: View {
     private let description: UpdateDescription
+    private let strings: UpdatePromptStrings
     private let explanatoryMessage: String?
     private let onUpdateNow: () -> Void
     private let onLater: () -> Void
@@ -30,6 +31,7 @@ public struct UpdatePromptView: View {
     /// Creates an update prompt view.
     ///
     /// - Parameter description: The update that passed every pipeline gate.
+    /// - Parameter strings: The user-visible strings. Defaults to the module's localized catalog values.
     /// - Parameter explanatoryMessage: An optional message shown on required updates only.
     ///   Absent on optional updates regardless of whether a value is provided.
     /// - Parameter onUpdateNow: Called when the user taps "Update Now".
@@ -37,12 +39,14 @@ public struct UpdatePromptView: View {
     /// - Parameter onSkip: Called when the user taps "Skip This Version" (optional updates only).
     public init(
         description: UpdateDescription,
+        strings: UpdatePromptStrings = UpdatePromptStrings(),
         explanatoryMessage: String? = nil,
         onUpdateNow: @escaping () -> Void,
         onLater: @escaping () -> Void,
         onSkip: @escaping () -> Void
     ) {
         self.description = description
+        self.strings = strings
         self.explanatoryMessage = explanatoryMessage
         self.onUpdateNow = onUpdateNow
         self.onLater = onLater
@@ -93,7 +97,7 @@ public struct UpdatePromptView: View {
                     // Release notes — omitted when absent or empty.
                     if let notes = self.releaseNotesText {
                         VStack(alignment: .leading, spacing: 10.0) {
-                            Text("What's New")
+                            Text(self.strings.releaseNotesHeading)
                                 .font(.headline)
                             Text(notes)
                                 .font(.body)
@@ -110,7 +114,7 @@ public struct UpdatePromptView: View {
             // Actions.
             VStack {
                 Button(action: self.onUpdateNow) {
-                    Text("Update Now")
+                    Text(self.strings.updateButton)
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity)
                 }
@@ -118,14 +122,14 @@ public struct UpdatePromptView: View {
                 .controlSize(.large)
                 if self.description.requirement == .optional {
                     Button(action: self.onLater) {
-                        Text("Later")
+                        Text(self.strings.deferButton)
                             .fontWeight(.medium)
                             .frame(maxWidth: .infinity)
                     }
                     .standardButtonStyle()
                     .controlSize(.large)
                     Button(action: self.onSkip) {
-                        Text("Skip This Version")
+                        Text(self.strings.skipButton)
                             .fontWeight(.medium)
                             .frame(maxWidth: .infinity)
                     }
@@ -142,7 +146,7 @@ public struct UpdatePromptView: View {
     // MARK: - Internal Helpers (accessible via @testable import for testing)
 
     var titleText: String {
-        self.description.requirement == .required ? "Update Required" : "Update Available"
+        self.description.requirement == .required ? self.strings.updateRequiredTitle : self.strings.updateAvailableTitle
     }
 
     var formattedFileSize: String? {

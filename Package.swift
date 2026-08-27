@@ -28,7 +28,8 @@ let package = Package(
         ),
         .target(
             name: "SwiftAppUpdateKitSwiftUI",
-            dependencies: ["SwiftAppUpdateKit"]
+            dependencies: ["SwiftAppUpdateKit"],
+            resources: [.process("Localizable.xcstrings")]
         ),
         .testTarget(
             name: "SwiftAppUpdateKitTests",
