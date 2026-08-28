@@ -59,13 +59,13 @@ public struct UpdatePromptView: View {
                 VStack(alignment: .leading, spacing: 30.0) {
                     HStack(alignment: .center, spacing: 15.0) {
                         AppIconView(artworkURL: self.description.metadata.artworkURL)
+                            .accessibilityHidden(true)
 
                         // Title, version transition, and optional download size.
                         VStack(alignment: .leading) {
                             Text(self.titleText)
                                 .font(.title3)
                                 .bold()
-                                .multilineTextAlignment(.center)
                             (Text(self.description.installedVersionString)
                                 + Text(verbatim: " ")
                                 + Text(Image(systemName: "arrow.forward"))
@@ -74,6 +74,13 @@ public struct UpdatePromptView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .imageScale(.small)
+                                .accessibilityLabel(
+                                    String(
+                                        localized: "updatePrompt.accessibility.versionTransition",
+                                        defaultValue: "Installed version \(self.description.installedVersionString), new version \(self.description.storeVersionString)",
+                                        bundle: .module
+                                    )
+                                )
                             if let size = self.formattedFileSize {
                                 Text(size)
                                     .font(.subheadline)
@@ -89,6 +96,7 @@ public struct UpdatePromptView: View {
                             + Text(message))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .accessibilityLabel(message)
                     }
 
                     // Release notes — omitted when absent or empty.
@@ -113,25 +121,31 @@ public struct UpdatePromptView: View {
                 Button(action: self.onUpdate) {
                     Text(self.strings.updateButton)
                         .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                 }
                 .prominentButtonStyle()
                 .controlSize(.large)
+                .fixedSize(horizontal: false, vertical: true)
                 if self.description.requirement == .optional {
                     Button(action: self.onDefer) {
                         Text(self.strings.deferButton)
                             .fontWeight(.medium)
+                            .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
                     }
                     .standardButtonStyle()
                     .controlSize(.large)
+                    .fixedSize(horizontal: false, vertical: true)
                     Button(action: self.onSkip) {
                         Text(self.strings.skipButton)
                             .fontWeight(.medium)
+                            .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
                     }
                     .standardButtonStyle()
                     .controlSize(.large)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.horizontal)
