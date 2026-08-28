@@ -62,10 +62,14 @@ struct UpdateCheckerModifier: ViewModifier {
     @State private var isSheetPresented = false
     @State private var presentedDescription: UpdateDescription?
 
-    // True when all three conditions are met: permission granted, update pending, not already shown.
-    // Used as the task ID so the task restarts whenever any condition changes.
+    // True when permission is granted, an update is pending, this modifier is not already showing
+    // the sheet, and no other presenter holds the claim. Used as the task ID so the task restarts
+    // whenever any condition changes — including when another presenter releases the claim.
     private var shouldAttemptPresentation: Bool {
-        return self.isPermitted && self.checker.pendingUpdate != nil && !self.isSheetPresented
+        return self.isPermitted
+            && self.checker.pendingUpdate != nil
+            && !self.isSheetPresented
+            && self.checker.presentationState != .presenting
     }
 
     func body(content: Content) -> some View {
@@ -98,8 +102,24 @@ struct UpdateCheckerModifier: ViewModifier {
                     )
                 }
             }
+            .onChange(of: self.isPermitted) { _, newValue in
+                // Revoking permission while the sheet is visible is a withdrawal:
+                // release the claim without writing any suppression state.
+                if !newValue && self.isSheetPresented {
+                    self.checker.releasePendingUpdate()
+                    self.isSheetPresented = false
+                    self.presentedDescription = nil
+                }
+            }
             .onChange(of: self.checker.pendingUpdate) { _, newValue in
                 if newValue == nil {
+                    // Resolved by a user action (snooze or skip).
+                    self.isSheetPresented = false
+                    self.presentedDescription = nil
+                } else if self.isSheetPresented {
+                    // Supersession: a newer update arrived while this sheet is visible.
+                    // Withdraw without suppression so the new version can be re-presented.
+                    self.checker.releasePendingUpdate()
                     self.isSheetPresented = false
                     self.presentedDescription = nil
                 }

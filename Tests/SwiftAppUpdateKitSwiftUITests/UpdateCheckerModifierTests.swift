@@ -199,4 +199,50 @@ struct UpdateCheckerModifierTests {
         #expect(resultAfterCheck != nil)
         #expect(checker.presentationState == .presenting)
     }
+
+    // MARK: - Withdrawal and Exclusivity
+
+    @Test func withdrawalReleasesClaimWithoutSuppression() async throws {
+        // Simulates the modifier calling releasePendingUpdate when isPermitted becomes false
+        // while the sheet is showing.
+        let checker = self.makeChecker()
+        try await checker.check(overridingThrottle: true)
+
+        _ = checker.claimPendingUpdate()
+        checker.releasePendingUpdate()
+
+        // Update remains pending; no snooze or skip was recorded.
+        #expect(checker.pendingUpdate != nil)
+        #expect(checker.presentationState == .awaitingPermission)
+    }
+
+    @Test func updateIsClaimableAgainAfterWithdrawal() async throws {
+        let checker = self.makeChecker()
+        try await checker.check(overridingThrottle: true)
+
+        _ = checker.claimPendingUpdate()
+        checker.releasePendingUpdate()
+
+        // Once released, the next waitAndClaim succeeds and re-enters presenting state.
+        let description = await UpdateCheckerModifier.waitAndClaim(
+            checker: checker,
+            settleInterval: .milliseconds(10)
+        )
+        #expect(description != nil)
+        #expect(checker.presentationState == .presenting)
+    }
+
+    @Test func secondClaimantFindsNothingWhileFirstIsPresenting() async throws {
+        // Exclusivity: a manual presenter alongside the modifier results in only one sheet.
+        let checker = self.makeChecker()
+        try await checker.check(overridingThrottle: true)
+
+        let firstClaim = checker.claimPendingUpdate()
+        #expect(firstClaim != nil)
+
+        // A second call (from a second modifier or a manual presenter) gets nothing.
+        let secondClaim = checker.claimPendingUpdate()
+        #expect(secondClaim == nil)
+        #expect(checker.presentationState == .presenting)
+    }
 }
