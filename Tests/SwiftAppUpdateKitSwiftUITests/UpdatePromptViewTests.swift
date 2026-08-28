@@ -51,8 +51,8 @@ struct UpdatePromptViewTests {
             ),
             strings: strings,
             explanatoryMessage: explanatoryMessage,
-            onUpdateNow: {},
-            onLater: {},
+            onUpdate: {},
+            onDefer: {},
             onSkip: {}
         )
     }

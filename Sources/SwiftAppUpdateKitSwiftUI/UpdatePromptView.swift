@@ -17,15 +17,15 @@ import SwiftUI
 /// as a modal sheet, full-screen cover, in a navigation stack, or embedded in
 /// another view — and previewed without a checker.
 ///
-/// The view enforces its own dismissal rules. Both variants disable swipe-to-dismiss;
-/// the optional variant offers the "Later" and "Skip This Version" actions as the
-/// only paths to dismissal, while the required variant offers only "Update Now".
+/// The view enforces its own dismissal rules. Both variants disable swipe-to-dismiss.
+/// The optional variant offers the deferral and skip actions as the only paths to
+/// dismissal; the required variant offers only the update action.
 public struct UpdatePromptView: View {
     private let description: UpdateDescription
     private let strings: UpdatePromptStrings
     private let explanatoryMessage: String?
-    private let onUpdateNow: () -> Void
-    private let onLater: () -> Void
+    private let onUpdate: () -> Void
+    private let onDefer: () -> Void
     private let onSkip: () -> Void
 
     /// Creates an update prompt view.
@@ -34,22 +34,22 @@ public struct UpdatePromptView: View {
     /// - Parameter strings: The user-visible strings. Defaults to the module's localized catalog values.
     /// - Parameter explanatoryMessage: An optional message shown on required updates only.
     ///   Absent on optional updates regardless of whether a value is provided.
-    /// - Parameter onUpdateNow: Called when the user taps "Update Now".
-    /// - Parameter onLater: Called when the user taps "Later" (optional updates only).
-    /// - Parameter onSkip: Called when the user taps "Skip This Version" (optional updates only).
+    /// - Parameter onUpdate: Called when the user confirms they want to update.
+    /// - Parameter onDefer: Called when the user chooses to defer (optional updates only).
+    /// - Parameter onSkip: Called when the user chooses to skip this version (optional updates only).
     public init(
         description: UpdateDescription,
         strings: UpdatePromptStrings = UpdatePromptStrings(),
         explanatoryMessage: String? = nil,
-        onUpdateNow: @escaping () -> Void,
-        onLater: @escaping () -> Void,
+        onUpdate: @escaping () -> Void,
+        onDefer: @escaping () -> Void,
         onSkip: @escaping () -> Void
     ) {
         self.description = description
         self.strings = strings
         self.explanatoryMessage = explanatoryMessage
-        self.onUpdateNow = onUpdateNow
-        self.onLater = onLater
+        self.onUpdate = onUpdate
+        self.onDefer = onDefer
         self.onSkip = onSkip
     }
 
@@ -110,7 +110,7 @@ public struct UpdatePromptView: View {
 
             // Actions.
             VStack {
-                Button(action: self.onUpdateNow) {
+                Button(action: self.onUpdate) {
                     Text(self.strings.updateButton)
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity)
@@ -118,7 +118,7 @@ public struct UpdatePromptView: View {
                 .prominentButtonStyle()
                 .controlSize(.large)
                 if self.description.requirement == .optional {
-                    Button(action: self.onLater) {
+                    Button(action: self.onDefer) {
                         Text(self.strings.deferButton)
                             .fontWeight(.medium)
                             .frame(maxWidth: .infinity)
@@ -213,8 +213,8 @@ private let previewRequiredMetadata = AppStoreMetadata(
             requirement: .optional,
             metadata: previewOptionalMetadata
         ),
-        onUpdateNow: {},
-        onLater: {},
+        onUpdate: {},
+        onDefer: {},
         onSkip: {}
     )
 }
@@ -237,8 +237,8 @@ private let previewRequiredMetadata = AppStoreMetadata(
                 fileSizeInBytes: nil
             )
         ),
-        onUpdateNow: {},
-        onLater: {},
+        onUpdate: {},
+        onDefer: {},
         onSkip: {}
     )
 }
@@ -252,8 +252,8 @@ private let previewRequiredMetadata = AppStoreMetadata(
             metadata: previewRequiredMetadata
         ),
         explanatoryMessage: "This update contains a required security fix.",
-        onUpdateNow: {},
-        onLater: {},
+        onUpdate: {},
+        onDefer: {},
         onSkip: {}
     )
 }
