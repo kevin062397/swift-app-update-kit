@@ -96,7 +96,8 @@ struct AppStoreUpdateSourceTests {
 
         let requests = await session.capturedRequests
         let items = requests.first.map { self.queryItems(from: $0) } ?? []
-        #expect(items.contains(URLQueryItem(name: "country", value: "JP")))
+        // Country code is normalized to lowercase before URL construction.
+        #expect(items.contains(URLQueryItem(name: "country", value: "jp")))
     }
 
     @Test func requestBypassesURLCache() async {
