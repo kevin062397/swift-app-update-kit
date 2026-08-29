@@ -114,7 +114,7 @@ The release age gate allows time for a phased rollout to propagate before the pr
 
 ## Testing
 
-The production gate always returns `.suppressed(.nonProductionBuild)` in the Simulator and with a debugger attached, preventing development builds from consuming snooze or skip tokens.
+The production gate always returns `.suppressed(.nonProductionBuild)` in the Simulator and with a debugger attached, preventing development builds from consuming snooze or skip tokens. To exercise the full pipeline on a device without a production build, set `shouldBypassProductionBuildCheck: true` in your configuration — do not ship this to users.
 
 To preview the sheet layout, instantiate `UpdatePromptView` directly with any data you construct — no checker or network call needed. The full DocC article covers both view testing and on-device pipeline testing.
 

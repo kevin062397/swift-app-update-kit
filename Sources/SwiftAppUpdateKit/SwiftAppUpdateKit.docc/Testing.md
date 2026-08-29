@@ -72,7 +72,7 @@ UpdatePromptView(
 
 ## Understanding the Production Gate
 
-``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/check(overridingThrottle:)`` always return
+``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/check(shouldBypassThrottle:)`` always return
 `.suppressed(.nonProductionBuild)` when running in the Simulator or with a debugger attached.
 This is intentional — it prevents a development build from consuming a snooze or skip token,
 and from prompting during a UI review session.
@@ -89,18 +89,31 @@ if case .suppressed(let reason) = checker.lastOutcome {
 }
 ```
 
+## Bypassing the Production Gate
+
+To exercise the full pipeline on a non-production build — the Simulator, with a debugger attached, or in TestFlight — set `shouldBypassProductionBuildCheck: true` in your configuration:
+
+```swift
+let configuration = UpdateCheckConfiguration(
+    policy: policy,
+    shouldBypassProductionBuildCheck: true  // remove before shipping
+)
+```
+
+The production-build check is skipped and the pipeline proceeds to the network request. The throttle, compatibility, release age, and policy checks still apply. Do not ship this flag enabled.
+
 ## Testing on a Real Device
 
 To exercise the full eleven-gate pipeline, run a device build without an attached debugger.
 The production gate passes, and the pipeline proceeds through the remaining ten gates.
 
-Use ``UpdateChecker/check(overridingThrottle:)`` with `overridingThrottle: true` to bypass
+Use ``UpdateChecker/check(shouldBypassThrottle:)`` with `shouldBypassThrottle: true` to bypass
 the throttle gate and force a network request regardless of when the last check ran:
 
 ```swift
 Task {
     do {
-        let outcome = try await checker.check(overridingThrottle: true)
+        let outcome = try await checker.check(shouldBypassThrottle: true)
         print("Outcome: \(outcome)")
     } catch {
         print("Check failed: \(error)")
