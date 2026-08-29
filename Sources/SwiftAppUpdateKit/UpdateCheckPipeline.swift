@@ -29,12 +29,28 @@ struct BundleMetadata {
 
 // MARK: - Configuration
 
+/// The policy and interval configuration passed to ``UpdateChecker`` at construction.
+///
+/// All intervals default to one day (86 400 s). Pass custom values to change the check
+/// frequency, snooze duration, or the release-age gate.
 public struct UpdateCheckConfiguration: Sendable {
+    /// The policy that maps each version classification to a requirement.
     public let policy: UpdatePolicy
+    /// The minimum elapsed time between automatic checks. Defaults to one day (86 400 s).
     public let throttleInterval: TimeInterval
+    /// The duration for which a snoozed version is suppressed. Defaults to one day (86 400 s).
     public let snoozeInterval: TimeInterval
+    /// The minimum age a store release must reach before it is offered. Defaults to one day (86 400 s).
+    ///
+    /// This gate exists to allow time for a phased rollout to propagate before the prompt reaches users.
     public let minimumReleaseAge: TimeInterval
 
+    /// Creates a configuration value.
+    ///
+    /// - Parameter policy: The policy that maps version classifications to requirements.
+    /// - Parameter throttleInterval: Minimum seconds between automatic checks. Defaults to 86 400.
+    /// - Parameter snoozeInterval: Seconds a snoozed version is suppressed. Defaults to 86 400.
+    /// - Parameter minimumReleaseAge: Minimum seconds since release before a version is offered. Defaults to 86 400.
     public init(
         policy: UpdatePolicy,
         throttleInterval: TimeInterval = 86400,
