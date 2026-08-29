@@ -136,7 +136,8 @@ public final class UpdateChecker {
             currentDate: self.currentDate,
             currentOSVersion: self.currentOSVersion,
             bundleMetadataProvider: self.bundleMetadataProvider,
-            overridesThrottle: overridingThrottle
+            overridesThrottle: overridingThrottle,
+            bypassesProductionBuildCheck: self.configuration.bypassesProductionBuildCheck
         )
 
         let task = Task<UpdateCheckOutcome, any Error> {

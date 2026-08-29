@@ -105,6 +105,7 @@ struct UpdateCheckPipelineTests {
         currentDate: Date,
         currentOSVersionString: String = "17.0",
         overridesThrottle: Bool = false,
+        bypassesProductionBuildCheck: Bool = false,
         throttleInterval: TimeInterval = 86400,
         snoozeInterval: TimeInterval = 86400,
         minimumReleaseAge: TimeInterval = 86400
@@ -115,7 +116,8 @@ struct UpdateCheckPipelineTests {
                 policy: policy,
                 throttleInterval: throttleInterval,
                 snoozeInterval: snoozeInterval,
-                minimumReleaseAge: minimumReleaseAge
+                minimumReleaseAge: minimumReleaseAge,
+                bypassesProductionBuildCheck: bypassesProductionBuildCheck
             ),
             promptStateStore: promptStateStore,
             buildEnvironmentDetector: MockBuildEnvironmentDetector(isProduction: isProduction),
@@ -124,7 +126,8 @@ struct UpdateCheckPipelineTests {
             currentDate: { currentDate },
             currentOSVersion: { AppVersion(currentOSVersionString) },
             bundleMetadataProvider: { resolvedBundleMetadata },
-            overridesThrottle: overridesThrottle
+            overridesThrottle: overridesThrottle,
+            bypassesProductionBuildCheck: bypassesProductionBuildCheck
         )
     }
 
@@ -214,6 +217,48 @@ struct UpdateCheckPipelineTests {
         #expect(await source.callCount == 0)
     }
 
+    @Test func nonProductionBuildWithCheckBypassedProceedsPastGate() async throws {
+        let store = InMemoryPromptStateStore()
+        let source = MockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let pipeline = self.makePipeline(
+            promptStateStore: store,
+            isProduction: false,
+            updateSource: source,
+            currentDate: self.referenceDate,
+            bypassesProductionBuildCheck: true
+        )
+
+        let outcome = try await pipeline.run()
+
+        // The pipeline proceeds past Gate 2 and issues a network request.
+        #expect(await source.callCount == 1)
+        guard case .updateAvailable = outcome else {
+            Issue.record("Expected updateAvailable, got \(outcome)")
+            return
+        }
+    }
+
+    @Test func productionBuildWithCheckBypassedIsNotAffected() async throws {
+        // Verifies that bypassesProductionBuildCheck on a real production build has no side effect.
+        let store = InMemoryPromptStateStore()
+        let source = MockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let pipeline = self.makePipeline(
+            promptStateStore: store,
+            isProduction: true,
+            updateSource: source,
+            currentDate: self.referenceDate,
+            bypassesProductionBuildCheck: true
+        )
+
+        let outcome = try await pipeline.run()
+
+        #expect(await source.callCount == 1)
+        guard case .updateAvailable = outcome else {
+            Issue.record("Expected updateAvailable, got \(outcome)")
+            return
+        }
+    }
+
     // MARK: - Gate 3: Bundle Metadata
 
     @Test func missingBundleMetadataThrows() async throws {
@@ -228,7 +273,8 @@ struct UpdateCheckPipelineTests {
             currentDate: { self.referenceDate },
             currentOSVersion: { AppVersion("17.0") },
             bundleMetadataProvider: { nil },
-            overridesThrottle: false
+            overridesThrottle: false,
+            bypassesProductionBuildCheck: false
         )
 
         await #expect(throws: UpdateCheckFailure.missingBundleMetadata) {

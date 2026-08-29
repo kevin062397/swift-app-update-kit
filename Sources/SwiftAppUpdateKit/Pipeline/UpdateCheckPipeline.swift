@@ -44,6 +44,12 @@ public struct UpdateCheckConfiguration: Sendable {
     ///
     /// This gate exists to allow time for a phased rollout to propagate before the prompt reaches users.
     public let minimumReleaseAge: TimeInterval
+    /// When `true`, the production-build gate is skipped and checks run in the simulator,
+    /// under a debugger, and in TestFlight builds. Defaults to `false`.
+    ///
+    /// Set this to `true` in a development or test configuration to exercise the full pipeline
+    /// on a device without a production build. Do not enable in a configuration you ship to users.
+    public let bypassesProductionBuildCheck: Bool
 
     /// Creates a configuration value.
     ///
@@ -51,16 +57,19 @@ public struct UpdateCheckConfiguration: Sendable {
     /// - Parameter throttleInterval: Minimum seconds between automatic checks. Defaults to 86 400.
     /// - Parameter snoozeInterval: Seconds a snoozed version is suppressed. Defaults to 86 400.
     /// - Parameter minimumReleaseAge: Minimum seconds since release before a version is offered. Defaults to 86 400.
+    /// - Parameter bypassesProductionBuildCheck: When `true`, skips the production-build gate. Defaults to `false`.
     public init(
         policy: UpdatePolicy,
         throttleInterval: TimeInterval = 86400,
         snoozeInterval: TimeInterval = 86400,
-        minimumReleaseAge: TimeInterval = 86400
+        minimumReleaseAge: TimeInterval = 86400,
+        bypassesProductionBuildCheck: Bool = false
     ) {
         self.policy = policy
         self.throttleInterval = throttleInterval
         self.snoozeInterval = snoozeInterval
         self.minimumReleaseAge = minimumReleaseAge
+        self.bypassesProductionBuildCheck = bypassesProductionBuildCheck
     }
 }
 
@@ -76,6 +85,7 @@ struct UpdateCheckPipeline {
     let currentOSVersion: @Sendable () -> AppVersion
     let bundleMetadataProvider: @Sendable () -> BundleMetadata?
     let overridesThrottle: Bool
+    let bypassesProductionBuildCheck: Bool
 
     func run() async throws(UpdateCheckFailure) -> UpdateCheckOutcome {
         let now = self.currentDate()
@@ -94,7 +104,9 @@ struct UpdateCheckPipeline {
 
         // Gate 2: Production build.
         // Placed after the throttle gate so that the StoreKit lookup is skipped on throttled launches.
-        if await !self.buildEnvironmentDetector.isProductionBuild() {
+        if !self.bypassesProductionBuildCheck,
+            await !self.buildEnvironmentDetector.isProductionBuild()
+        {
             return .suppressed(.nonProductionBuild)
         }
 
