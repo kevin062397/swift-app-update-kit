@@ -110,6 +110,24 @@ struct MyApp: App {
 }
 ```
 
+### Customizing Labels
+
+Pass a custom ``UpdatePromptStrings`` to override any subset of the six user-visible labels. Every property defaults to the localized value from the module's string catalog.
+
+```swift
+var strings = UpdatePromptStrings()
+strings.deferButton = "Remind Me Later"
+strings.skipButton  = "Not Now"
+
+UpdatePromptView(
+    description: description,
+    strings: strings,
+    onUpdate: { Task { await checker.updateNow(for: description) } },
+    onDefer: { Task { await checker.snooze(description) } },
+    onSkip: { Task { await checker.skip(description) } }
+)
+```
+
 ## Next Steps
 
 For guidance on previewing the sheet during development and diagnosing suppressed checks, see <doc:Testing>.
