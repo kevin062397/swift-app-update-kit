@@ -152,7 +152,7 @@ struct AppStoreUpdateSource: UpdateSource {
         components.path = "/lookup"
         var queryItems = [URLQueryItem(name: "bundleId", value: bundleIdentifier)]
         if let countryCode = storefrontCountryCode {
-            queryItems.append(URLQueryItem(name: "country", value: countryCode))
+            queryItems.append(URLQueryItem(name: "country", value: countryCode.lowercased()))
         }
         components.queryItems = queryItems
         // Force-unwrap is safe: all components are known-valid string constants.

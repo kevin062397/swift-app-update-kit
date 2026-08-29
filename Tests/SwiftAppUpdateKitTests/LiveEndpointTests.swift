@@ -30,7 +30,7 @@ struct LiveEndpointTests {
     @Test func usStorefrontResponseCarriesAllContractFields() async throws {
         let metadata = try await source.fetchMetadata(
             bundleIdentifier: wwdcBundleIdentifier,
-            storefrontCountryCode: "us"
+            storefrontCountryCode: "US"
         )
         #expect(metadata.trackID > 0)
         #expect(!metadata.versionString.isEmpty)
@@ -45,7 +45,7 @@ struct LiveEndpointTests {
     @Test func nonUsStorefrontLookupReturnsARecord() async throws {
         let metadata = try await source.fetchMetadata(
             bundleIdentifier: wwdcBundleIdentifier,
-            storefrontCountryCode: "gb"
+            storefrontCountryCode: "GB"
         )
         #expect(!metadata.versionString.isEmpty)
         #expect(metadata.productPageURL.scheme == "https")
