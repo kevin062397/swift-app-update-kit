@@ -221,7 +221,7 @@ private struct MockURLOpener: URLOpener {
         #expect(checker.pendingUpdate?.storeVersionString == Self.storeVersionString)
 
         // Override throttle to force a second network request within the same session.
-        _ = try await checker.check(overridingThrottle: true)
+        _ = try await checker.check(shouldBypassThrottle: true)
         #expect(checker.pendingUpdate?.storeVersionString == Self.newerStoreVersionString)
     }
 
@@ -234,7 +234,7 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source, promptStateStore: store)
 
         _ = try await checker.check()
-        _ = try await checker.check(overridingThrottle: true)
+        _ = try await checker.check(shouldBypassThrottle: true)
 
         // The superseded version must have no suppression written against it.
         let isSkipped = await store.isVersionSkipped(Self.storeVersionString)
@@ -257,7 +257,7 @@ private struct MockURLOpener: URLOpener {
         _ = try await checker.check()
         let firstPending = checker.pendingUpdate
 
-        _ = try await checker.check(overridingThrottle: true)
+        _ = try await checker.check(shouldBypassThrottle: true)
         let secondPending = checker.pendingUpdate
 
         #expect(firstPending == secondPending)

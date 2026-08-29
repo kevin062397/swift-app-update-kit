@@ -100,7 +100,7 @@ struct UpdateCheckerModifierTests {
 
     @Test func updateIsClaimedAfterSettleInterval() async throws {
         let checker = self.makeChecker()
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         let description = await UpdateCheckerModifier.waitAndClaim(
             checker: checker,
@@ -114,7 +114,7 @@ struct UpdateCheckerModifierTests {
     @Test func nothingIsClaimedWhenNoPendingUpdateExists() async throws {
         // Store version equals installed version, so no update is found.
         let checker = self.makeChecker(storeVersionString: Self.installedVersionString)
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         let description = await UpdateCheckerModifier.waitAndClaim(
             checker: checker,
@@ -127,7 +127,7 @@ struct UpdateCheckerModifierTests {
 
     @Test func cancellationDuringSettleIntervalPreventsClaim() async throws {
         let checker = self.makeChecker()
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         let task = Task<UpdateDescription?, Never> {
             await UpdateCheckerModifier.waitAndClaim(
@@ -149,7 +149,7 @@ struct UpdateCheckerModifierTests {
         // When isPermitted = false, the modifier's task guard exits before calling waitAndClaim,
         // leaving the checker in the awaiting-permission state until permission is granted.
         let checker = self.makeChecker()
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         #expect(checker.pendingUpdate != nil)
         #expect(checker.presentationState == .awaitingPermission)
@@ -162,7 +162,7 @@ struct UpdateCheckerModifierTests {
         // The modifier sees isPermitted become true with pendingUpdate already set,
         // starts the task, and claims the update after the settle interval.
         let checker = self.makeChecker()
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         // Simulate the modifier starting its task once permission is granted.
         let description = await UpdateCheckerModifier.waitAndClaim(
@@ -189,7 +189,7 @@ struct UpdateCheckerModifierTests {
         #expect(resultBeforeCheck == nil)
 
         // Check completes, update is now pending.
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         // The re-triggered task now claims the update.
         let resultAfterCheck = await UpdateCheckerModifier.waitAndClaim(
@@ -206,7 +206,7 @@ struct UpdateCheckerModifierTests {
         // Simulates the modifier calling releasePendingUpdate when isPermitted becomes false
         // while the sheet is showing.
         let checker = self.makeChecker()
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         _ = checker.claimPendingUpdate()
         checker.releasePendingUpdate()
@@ -218,7 +218,7 @@ struct UpdateCheckerModifierTests {
 
     @Test func updateIsClaimableAgainAfterWithdrawal() async throws {
         let checker = self.makeChecker()
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         _ = checker.claimPendingUpdate()
         checker.releasePendingUpdate()
@@ -235,7 +235,7 @@ struct UpdateCheckerModifierTests {
     @Test func secondClaimantFindsNothingWhileFirstIsPresenting() async throws {
         // Exclusivity: a manual presenter alongside the modifier results in only one sheet.
         let checker = self.makeChecker()
-        try await checker.check(overridingThrottle: true)
+        try await checker.check(shouldBypassThrottle: true)
 
         let firstClaim = checker.claimPendingUpdate()
         #expect(firstClaim != nil)

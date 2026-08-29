@@ -116,12 +116,12 @@ public final class UpdateChecker {
     /// If a check is already in flight, the caller joins it and receives its outcome.
     /// No second network request is issued.
     ///
-    /// - Parameter overridingThrottle: When `true`, skips the throttle gate so the check
+    /// - Parameter shouldBypassThrottle: When `true`, skips the throttle gate so the check
     ///   always performs a network request. Suitable for a user-initiated "Check for Updates"
     ///   action, but does not bypass compatibility or policy gates.
     @discardableResult
     public func check(
-        overridingThrottle: Bool = false
+        shouldBypassThrottle: Bool = false
     ) async throws(UpdateCheckFailure) -> UpdateCheckOutcome {
         if let existing = self.inFlightTask {
             return try await Self.extractOutcome(from: existing)
@@ -136,8 +136,8 @@ public final class UpdateChecker {
             currentDate: self.currentDate,
             currentOSVersion: self.currentOSVersion,
             bundleMetadataProvider: self.bundleMetadataProvider,
-            overridesThrottle: overridingThrottle,
-            bypassesProductionBuildCheck: self.configuration.bypassesProductionBuildCheck
+            shouldBypassThrottle: shouldBypassThrottle,
+            shouldBypassProductionBuildCheck: self.configuration.shouldBypassProductionBuildCheck
         )
 
         let task = Task<UpdateCheckOutcome, any Error> {

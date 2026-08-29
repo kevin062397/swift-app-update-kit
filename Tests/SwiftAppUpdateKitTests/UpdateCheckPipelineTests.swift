@@ -104,8 +104,8 @@ struct UpdateCheckPipelineTests {
         updateSource: any UpdateSource,
         currentDate: Date,
         currentOSVersionString: String = "17.0",
-        overridesThrottle: Bool = false,
-        bypassesProductionBuildCheck: Bool = false,
+        shouldBypassThrottle: Bool = false,
+        shouldBypassProductionBuildCheck: Bool = false,
         throttleInterval: TimeInterval = 86400,
         snoozeInterval: TimeInterval = 86400,
         minimumReleaseAge: TimeInterval = 86400
@@ -117,7 +117,7 @@ struct UpdateCheckPipelineTests {
                 throttleInterval: throttleInterval,
                 snoozeInterval: snoozeInterval,
                 minimumReleaseAge: minimumReleaseAge,
-                bypassesProductionBuildCheck: bypassesProductionBuildCheck
+                shouldBypassProductionBuildCheck: shouldBypassProductionBuildCheck
             ),
             promptStateStore: promptStateStore,
             buildEnvironmentDetector: MockBuildEnvironmentDetector(isProduction: isProduction),
@@ -126,8 +126,8 @@ struct UpdateCheckPipelineTests {
             currentDate: { currentDate },
             currentOSVersion: { AppVersion(currentOSVersionString) },
             bundleMetadataProvider: { resolvedBundleMetadata },
-            overridesThrottle: overridesThrottle,
-            bypassesProductionBuildCheck: bypassesProductionBuildCheck
+            shouldBypassThrottle: shouldBypassThrottle,
+            shouldBypassProductionBuildCheck: shouldBypassProductionBuildCheck
         )
     }
 
@@ -187,7 +187,7 @@ struct UpdateCheckPipelineTests {
             promptStateStore: store,
             updateSource: source,
             currentDate: self.referenceDate,
-            overridesThrottle: true
+            shouldBypassThrottle: true
         )
 
         let outcome = try await pipeline.run()
@@ -225,7 +225,7 @@ struct UpdateCheckPipelineTests {
             isProduction: false,
             updateSource: source,
             currentDate: self.referenceDate,
-            bypassesProductionBuildCheck: true
+            shouldBypassProductionBuildCheck: true
         )
 
         let outcome = try await pipeline.run()
@@ -239,7 +239,7 @@ struct UpdateCheckPipelineTests {
     }
 
     @Test func productionBuildWithCheckBypassedIsNotAffected() async throws {
-        // Verifies that bypassesProductionBuildCheck on a real production build has no side effect.
+        // Verifies that shouldBypassProductionBuildCheck on a real production build has no side effect.
         let store = InMemoryPromptStateStore()
         let source = MockUpdateSource(result: .success(self.makeStoreMetadata()))
         let pipeline = self.makePipeline(
@@ -247,7 +247,7 @@ struct UpdateCheckPipelineTests {
             isProduction: true,
             updateSource: source,
             currentDate: self.referenceDate,
-            bypassesProductionBuildCheck: true
+            shouldBypassProductionBuildCheck: true
         )
 
         let outcome = try await pipeline.run()
@@ -273,8 +273,8 @@ struct UpdateCheckPipelineTests {
             currentDate: { self.referenceDate },
             currentOSVersion: { AppVersion("17.0") },
             bundleMetadataProvider: { nil },
-            overridesThrottle: false,
-            bypassesProductionBuildCheck: false
+            shouldBypassThrottle: false,
+            shouldBypassProductionBuildCheck: false
         )
 
         await #expect(throws: UpdateCheckFailure.missingBundleMetadata) {

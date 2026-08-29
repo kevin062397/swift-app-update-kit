@@ -49,7 +49,7 @@ public struct UpdateCheckConfiguration: Sendable {
     ///
     /// Set this to `true` in a development or test configuration to exercise the full pipeline
     /// on a device without a production build. Do not enable in a configuration you ship to users.
-    public let bypassesProductionBuildCheck: Bool
+    public let shouldBypassProductionBuildCheck: Bool
 
     /// Creates a configuration value.
     ///
@@ -57,19 +57,19 @@ public struct UpdateCheckConfiguration: Sendable {
     /// - Parameter throttleInterval: Minimum seconds between automatic checks. Defaults to 86 400.
     /// - Parameter snoozeInterval: Seconds a snoozed version is suppressed. Defaults to 86 400.
     /// - Parameter minimumReleaseAge: Minimum seconds since release before a version is offered. Defaults to 86 400.
-    /// - Parameter bypassesProductionBuildCheck: When `true`, skips the production-build gate. Defaults to `false`.
+    /// - Parameter shouldBypassProductionBuildCheck: When `true`, skips the production-build gate. Defaults to `false`.
     public init(
         policy: UpdatePolicy,
         throttleInterval: TimeInterval = 86400,
         snoozeInterval: TimeInterval = 86400,
         minimumReleaseAge: TimeInterval = 86400,
-        bypassesProductionBuildCheck: Bool = false
+        shouldBypassProductionBuildCheck: Bool = false
     ) {
         self.policy = policy
         self.throttleInterval = throttleInterval
         self.snoozeInterval = snoozeInterval
         self.minimumReleaseAge = minimumReleaseAge
-        self.bypassesProductionBuildCheck = bypassesProductionBuildCheck
+        self.shouldBypassProductionBuildCheck = shouldBypassProductionBuildCheck
     }
 }
 
@@ -84,16 +84,16 @@ struct UpdateCheckPipeline {
     let currentDate: @Sendable () -> Date
     let currentOSVersion: @Sendable () -> AppVersion
     let bundleMetadataProvider: @Sendable () -> BundleMetadata?
-    let overridesThrottle: Bool
-    let bypassesProductionBuildCheck: Bool
+    let shouldBypassThrottle: Bool
+    let shouldBypassProductionBuildCheck: Bool
 
     func run() async throws(UpdateCheckFailure) -> UpdateCheckOutcome {
         let now = self.currentDate()
 
-        // Gate 1: Outside throttle window (or throttle overridden).
+        // Gate 1: Outside throttle window (or throttle bypassed).
         // Environment detection moves after this gate because its StoreKit lookup can take up to 3 s
         // on first access; throttled launches — the common case — skip the gate entirely.
-        if !self.overridesThrottle {
+        if !self.shouldBypassThrottle {
             if let lastCheck = await self.promptStateStore.lastCheckDate(currentDate: now) {
                 let nextEligibleDate = lastCheck.addingTimeInterval(self.configuration.throttleInterval)
                 if now < nextEligibleDate {
@@ -104,7 +104,7 @@ struct UpdateCheckPipeline {
 
         // Gate 2: Production build.
         // Placed after the throttle gate so that the StoreKit lookup is skipped on throttled launches.
-        if !self.bypassesProductionBuildCheck,
+        if !self.shouldBypassProductionBuildCheck,
             await !self.buildEnvironmentDetector.isProductionBuild()
         {
             return .suppressed(.nonProductionBuild)

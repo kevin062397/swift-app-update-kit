@@ -12,7 +12,7 @@ import Foundation
 /// A failure that prevented an update check from completing.
 ///
 /// Inspect ``UpdateChecker/lastOutcome`` to see the most recent result without catching;
-/// catch this type only when calling ``UpdateChecker/check(overridingThrottle:)`` directly.
+/// catch this type only when calling ``UpdateChecker/check(shouldBypassThrottle:)`` directly.
 public enum UpdateCheckFailure: Error, Equatable, Sendable {
     /// The request could not be sent or completed due to a network error.
     case networkUnreachable
