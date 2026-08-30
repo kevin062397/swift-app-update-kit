@@ -4,7 +4,7 @@ SwiftAppUpdateKit is a Swift package that detects when a newer version of your a
 
 ## Features
 
-- **Automatic presentation** — one view modifier wires up launch-triggered checks and sheet presentation
+- **Automatic presentation** — one view modifier wires up launch-triggered checks and update prompt presentation
 - **Eleven-gate decision pipeline** — throttle, build environment, OS compatibility, release age, policy, skip, and snooze gates filter noise before any prompt appears
 - **Configurable policy** — map each version classification (major, minor, patch, revision) to silent, optional, or required
 - **Optional update** — offers update, defer, and skip actions
@@ -41,7 +41,7 @@ Or add it in Xcode via **File → Add Package Dependencies**. Then import the pr
 | Product                    | Use when                                                       |
 | -------------------------- | -------------------------------------------------------------- |
 | `SwiftAppUpdateKit`        | You need the checker and pipeline only (no SwiftUI dependency) |
-| `SwiftAppUpdateKitSwiftUI` | You want the built-in update sheet and view modifier           |
+| `SwiftAppUpdateKitSwiftUI` | You want the built-in update prompt and view modifier          |
 
 `SwiftAppUpdateKitSwiftUI` depends on `SwiftAppUpdateKit` automatically.
 
@@ -84,23 +84,23 @@ struct MyApp: App {
 }
 ```
 
-The modifier fires a check on first appearance and presents the update sheet once an update passes every gate.
+The modifier fires a check on first appearance and presents the update prompt once an update passes every gate.
 
 ## Controlling Presentation
 
 ### Delaying Presentation
 
-Pass `isPermitted` to hold the sheet until a condition becomes true. The check still runs at launch — only the sheet waits.
+Pass `isPermitted` to hold the update prompt until a condition becomes true. The check still runs at launch — only the update prompt waits.
 
 ```swift
 .checkForUpdates(using: checker, isPermitted: onboardingComplete)
 ```
 
-Revoking `isPermitted` while the sheet is visible withdraws it without recording any suppression state, so the same update can be re-presented once permission is re-granted.
+Revoking `isPermitted` while the update prompt is visible withdraws it without recording any suppression state, so the same update can be re-presented once permission is re-granted.
 
 ### Manual Presentation
 
-Use `checkAtLaunch()` and `claimUpdatePrompt()` when you need to slot the sheet into a custom presentation hierarchy, or to pass a custom `UpdatePromptStrings` to override any user-visible label. See [Getting Started](Sources/SwiftAppUpdateKit/SwiftAppUpdateKit.docc/GettingStarted.md) for a complete walkthrough of both.
+Use `checkAtLaunch()` and `claimUpdatePrompt()` when you need to slot the update prompt into a custom presentation hierarchy, or to pass a custom `UpdatePromptStrings` to override any user-visible label. See [Getting Started](Sources/SwiftAppUpdateKit/SwiftAppUpdateKit.docc/GettingStarted.md) for a complete walkthrough of both.
 
 ## Available Update
 
@@ -122,7 +122,7 @@ The release age gate allows time for a phased rollout to propagate before the pr
 
 The production gate always returns `.suppressed(.nonProductionBuild)` in the Simulator and with a debugger attached, preventing development builds from consuming snooze or skip tokens. To exercise the full pipeline on a device without a production build, set `shouldBypassProductionBuildCheck: true` in your configuration — do not ship this to users.
 
-To preview the sheet layout, instantiate `UpdatePromptView` directly with any data you construct — no checker or network call needed. The full DocC article covers both view testing and on-device pipeline testing.
+To preview the update prompt layout, instantiate `UpdatePromptView` directly with any data you construct — no checker or network call needed. The full DocC article covers both view testing and on-device pipeline testing.
 
 A live endpoint suite exercises the real iTunes Lookup API and is excluded from the default test run to keep it offline and deterministic. To run it, set `SWIFT_APP_UPDATE_KIT_LIVE_TESTS=1` in the environment before running `xcodebuild test`, or in the scheme's Run arguments in Xcode.
 

@@ -18,7 +18,7 @@ import SwiftAppUpdateKit
 import SwiftAppUpdateKitSwiftUI
 import SwiftUI
 
-// Add a debug button anywhere in your app to present the sheet on demand.
+// Add a debug button anywhere in your app to present the update prompt on demand.
 struct DebugUpdatePromptButton: View {
     @State private var isPresented = false
 
@@ -72,10 +72,7 @@ UpdatePromptView(
 
 ## Understanding the Production Gate
 
-``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/check(shouldBypassThrottle:)`` always return
-`.suppressed(.nonProductionBuild)` when running in the Simulator or with a debugger attached.
-This is intentional — it prevents a development build from consuming a snooze or skip token,
-and from prompting during a UI review session.
+``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/check(shouldBypassThrottle:)`` always return `.suppressed(.nonProductionBuild)` when running in the Simulator or with a debugger attached. This is intentional — it prevents a development build from consuming a snooze or skip token, and from prompting during a UI review session.
 
 Inspect ``UpdateChecker/lastOutcome`` after a check to confirm what the pipeline returned:
 
@@ -104,11 +101,9 @@ The production-build check is skipped and the pipeline proceeds to the network r
 
 ## Testing on a Real Device
 
-To exercise the full eleven-gate pipeline, run a device build without an attached debugger.
-The production gate passes, and the pipeline proceeds through the remaining ten gates.
+To exercise the full eleven-gate pipeline, run a device build without an attached debugger. The production gate passes, and the pipeline proceeds through the remaining ten gates.
 
-Use ``UpdateChecker/check(shouldBypassThrottle:)`` with `shouldBypassThrottle: true` to bypass
-the throttle gate and force a network request regardless of when the last check ran:
+Use ``UpdateChecker/check(shouldBypassThrottle:)`` with `shouldBypassThrottle: true` to bypass the throttle gate and force a network request regardless of when the last check ran:
 
 ```swift
 Task {
@@ -121,6 +116,4 @@ Task {
 }
 ```
 
-The pipeline still applies every other gate — compatibility, release age, policy, skip, and
-snooze — so `.upToDate` or `.suppressed` outcomes are expected unless your installed version
-is genuinely behind the store version.
+The pipeline still applies every other gate — compatibility, release age, policy, skip, and snooze — so `.upToDate` or `.suppressed` outcomes are expected unless your installed version is genuinely behind the store version.

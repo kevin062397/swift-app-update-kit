@@ -9,7 +9,7 @@ SwiftAppUpdateKit offers two ways to integrate update prompts:
 - **Automatic presentation** — attach the `.checkForUpdates(using:)` view modifier (from the `SwiftAppUpdateKitSwiftUI` product) to your root view and the library handles the rest.
 - **Manual presentation** — call ``UpdateChecker/checkAtLaunch()`` yourself and present `UpdatePromptView` on your own schedule.
 
-**The deciding question:** if the `isPermitted` condition on the automatic modifier already covers your case — for example, "don't show until onboarding is complete" — use the automatic path. Reach for manual presentation only when you need to slot the update sheet into a presentation hierarchy or navigation flow that the modifier cannot express.
+**The deciding question:** if the `isPermitted` condition on the automatic modifier already covers your case — for example, "don't show until onboarding is complete" — use the automatic path. Reach for manual presentation only when you need to slot the update prompt into a presentation hierarchy or navigation flow that the modifier cannot express.
 
 ## Declare a Policy
 
@@ -30,7 +30,7 @@ let configuration = UpdateCheckConfiguration(policy: policy)
 
 ## Automatic Presentation
 
-Attach `.checkForUpdates(using:)` to your root view. The library fires a check on first appearance and presents the sheet once an update is available.
+Attach `.checkForUpdates(using:)` to your root view. The library fires a check on first appearance and presents the update prompt once an update is available.
 
 ```swift
 import SwiftAppUpdateKit
@@ -52,7 +52,7 @@ struct MyApp: App {
 
 ### Delaying Presentation
 
-Pass `isPermitted` to delay presentation until a condition you supply becomes true. The check still runs at launch — only the sheet waits.
+Pass `isPermitted` to delay presentation until a condition you supply becomes true. The check still runs at launch — only the update prompt waits.
 
 ```swift
 @main
@@ -69,11 +69,11 @@ struct MyApp: App {
 }
 ```
 
-Revoking `isPermitted` while the sheet is visible withdraws the prompt without recording any suppression state, so the same update can be re-presented once permission is re-granted.
+Revoking `isPermitted` while the update prompt is visible withdraws it without recording any suppression state, so the same update can be re-presented once permission is re-granted.
 
 ## Manual Presentation
 
-Use ``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/claimUpdatePrompt()`` to manage the sheet yourself. This path gives you full control over where and when the prompt appears.
+Use ``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/claimUpdatePrompt()`` to manage the update prompt yourself. This path gives you full control over where and when the prompt appears.
 
 ```swift
 @main
@@ -130,7 +130,7 @@ UpdatePromptView(
 
 ## Available Update
 
-``UpdateChecker/availableUpdate`` reports the current store update independently of whether the user has snoozed or skipped the prompt — without affecting whether the sheet appears.
+``UpdateChecker/availableUpdate`` reports the current store update independently of whether the user has snoozed or skipped the prompt — without affecting whether the update prompt appears.
 
 ```swift
 // checker is @Observable, so this view re-renders automatically.
@@ -145,4 +145,4 @@ Because `checker` is `@Observable`, SwiftUI views that read `checker.availableUp
 
 ## Next Steps
 
-For guidance on previewing the sheet during development and diagnosing suppressed checks, see <doc:Testing>.
+For guidance on previewing the update prompt during development and diagnosing suppressed checks, see <doc:Testing>.
