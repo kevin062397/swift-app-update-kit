@@ -162,23 +162,26 @@ struct UpdateCheckPipeline {
             return .installedIsNewer
         }
 
-        // Gate 9: Classify the difference and resolve through policy.
+        // Gate 8 cleared: the store has a newer version. Build its full description before the
+        // suppression gates so that every downstream outcome can carry it.
         let classification = AppVersion.classify(bundleMetadata.installedVersion, storeMetadata.version)!
         let requirement = self.configuration.policy.requirement(for: classification)
+        let description = UpdateDescription(
+            installedVersionString: bundleMetadata.installedVersionString,
+            storeVersionString: storeMetadata.versionString,
+            requirement: requirement,
+            metadata: storeMetadata
+        )
 
-        switch requirement {
-        case .silent:
+        // Gate 9: Policy requirement.
+        if requirement == .silent {
             return .suppressed(.silentByPolicy(classification: classification))
+        }
 
-        case .required:
-            // Gates 10 and 11 do not apply: skip suppression for required updates is what makes
-            // the requirement meaningful.
-            break
-
-        case .optional:
+        if requirement == .optional {
             // Gate 10: Version not skipped.
             if await self.promptStateStore.isVersionSkipped(storeMetadata.versionString) {
-                return .suppressed(.skipped(version: storeMetadata.versionString))
+                return .suppressed(.skipped(description: description))
             }
 
             // Gate 11: Version not snoozed.
@@ -187,19 +190,13 @@ struct UpdateCheckPipeline {
                 currentDate: now,
                 snoozeInterval: self.configuration.snoozeInterval
             ), now < expiry {
-                return .suppressed(.snoozed(version: storeMetadata.versionString, expiry: expiry))
+                return .suppressed(.snoozed(description: description, expiry: expiry))
             }
         }
+        // Gates 10 and 11 do not apply to required updates: the skip/snooze state is what
+        // makes the requirement meaningful.
 
         await self.promptStateStore.pruneEntries(olderThan: storeMetadata.version)
-
-        return .updateAvailable(
-            UpdateDescription(
-                installedVersionString: bundleMetadata.installedVersionString,
-                storeVersionString: storeMetadata.versionString,
-                requirement: requirement,
-                metadata: storeMetadata
-            )
-        )
+        return .updatePromptReady(description)
     }
 }

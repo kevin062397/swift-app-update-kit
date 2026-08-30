@@ -63,9 +63,9 @@ public enum SuppressionReason: Equatable, Sendable {
     /// The configured policy maps this version classification to a silent requirement.
     case silentByPolicy(classification: VersionClassification)
     /// The user permanently skipped this version.
-    case skipped(version: String)
+    case skipped(description: UpdateDescription)
     /// The user snoozed this version and the snooze has not yet expired.
-    case snoozed(version: String, expiry: Date)
+    case snoozed(description: UpdateDescription, expiry: Date)
 }
 
 // MARK: - Outcome
@@ -76,7 +76,7 @@ public enum SuppressionReason: Equatable, Sendable {
 /// check. Read ``UpdateChecker/lastOutcome`` to see the most recent result at any time.
 public enum UpdateCheckOutcome: Equatable, Sendable {
     /// An update passed every gate and is ready to present.
-    case updateAvailable(UpdateDescription)
+    case updatePromptReady(UpdateDescription)
     /// The installed version matches the store version.
     case upToDate
     /// The installed version is newer than the store version.

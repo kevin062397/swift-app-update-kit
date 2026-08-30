@@ -67,7 +67,7 @@ struct UpdateCheckerModifier: ViewModifier {
     // whenever any condition changes — including when another presenter releases the claim.
     private var shouldAttemptPresentation: Bool {
         return self.isPermitted
-            && self.checker.pendingUpdate != nil
+            && self.checker.isUpdatePromptReady
             && !self.isSheetPresented
             && self.checker.presentationState != .presenting
     }
@@ -106,20 +106,25 @@ struct UpdateCheckerModifier: ViewModifier {
                 // Revoking permission while the sheet is visible is a withdrawal:
                 // release the claim without writing any suppression state.
                 if !newValue && self.isSheetPresented {
-                    self.checker.releasePendingUpdate()
+                    self.checker.releaseUpdatePrompt()
                     self.isSheetPresented = false
                     self.presentedDescription = nil
                 }
             }
-            .onChange(of: self.checker.pendingUpdate) { _, newValue in
-                if newValue == nil {
-                    // Resolved by a user action (snooze or skip).
+            .onChange(of: self.checker.isUpdatePromptReady) { _, newIsPending in
+                if !newIsPending {
+                    // Resolved by a user action (snooze or skip), or the store confirmed no update.
                     self.isSheetPresented = false
                     self.presentedDescription = nil
-                } else if self.isSheetPresented {
-                    // Supersession: a newer update arrived while this sheet is visible.
-                    // Withdraw without suppression so the new version can be re-presented.
-                    self.checker.releasePendingUpdate()
+                }
+            }
+            .onChange(of: self.checker.availableUpdate) { _, newUpdate in
+                // Supersession: a newer update arrived while the sheet is showing the old one.
+                // isUpdatePromptReady stays true (no signal), so availableUpdate is the supersession signal.
+                if self.isSheetPresented,
+                    newUpdate?.storeVersionString != self.presentedDescription?.storeVersionString
+                {
+                    self.checker.releaseUpdatePrompt()
                     self.isSheetPresented = false
                     self.presentedDescription = nil
                 }
@@ -142,7 +147,7 @@ struct UpdateCheckerModifier: ViewModifier {
 extension UpdateCheckerModifier {
     /// Waits for the settle interval, then claims the pending update.
     ///
-    /// Returns the claimed description, or `nil` if the task was cancelled or there is no pending
+    /// Returns the claimed description, or `nil` if the task was canceled or there is no pending
     /// update (or another presenter already holds the claim).
     @MainActor
     static func waitAndClaim(
@@ -151,6 +156,6 @@ extension UpdateCheckerModifier {
     ) async -> UpdateDescription? {
         try? await Task.sleep(for: settleInterval)
         guard !Task.isCancelled else { return nil }
-        return checker.claimPendingUpdate()
+        return checker.claimUpdatePrompt()
     }
 }

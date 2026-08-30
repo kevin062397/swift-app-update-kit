@@ -166,7 +166,7 @@ struct UpdateCheckPipelineTests {
 
         #expect(
             outcome
-                == .updateAvailable(
+                == .updatePromptReady(
                     UpdateDescription(
                         installedVersionString: Self.installedVersionString,
                         storeVersionString: Self.storeVersionString,
@@ -193,8 +193,8 @@ struct UpdateCheckPipelineTests {
         let outcome = try await pipeline.run()
 
         #expect(await source.callCount == 1)
-        guard case .updateAvailable = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
     }
@@ -232,8 +232,8 @@ struct UpdateCheckPipelineTests {
 
         // The pipeline proceeds past Gate 2 and issues a network request.
         #expect(await source.callCount == 1)
-        guard case .updateAvailable = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
     }
@@ -253,8 +253,8 @@ struct UpdateCheckPipelineTests {
         let outcome = try await pipeline.run()
 
         #expect(await source.callCount == 1)
-        guard case .updateAvailable = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
     }
@@ -448,8 +448,8 @@ struct UpdateCheckPipelineTests {
 
         let outcome = try await pipeline.run()
 
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
         #expect(description.requirement == .required)
@@ -469,7 +469,13 @@ struct UpdateCheckPipelineTests {
 
         let outcome = try await pipeline.run()
 
-        #expect(outcome == .suppressed(.skipped(version: Self.storeVersionString)))
+        let expectedDescription = UpdateDescription(
+            installedVersionString: Self.installedVersionString,
+            storeVersionString: Self.storeVersionString,
+            requirement: .optional,
+            metadata: self.makeStoreMetadata()
+        )
+        #expect(outcome == .suppressed(.skipped(description: expectedDescription)))
     }
 
     @Test func snoozedOptionalVersionIsSuppressed() async throws {
@@ -485,7 +491,13 @@ struct UpdateCheckPipelineTests {
 
         let outcome = try await pipeline.run()
 
-        #expect(outcome == .suppressed(.snoozed(version: Self.storeVersionString, expiry: expiry)))
+        let expectedDescription = UpdateDescription(
+            installedVersionString: Self.installedVersionString,
+            storeVersionString: Self.storeVersionString,
+            requirement: .optional,
+            metadata: self.makeStoreMetadata()
+        )
+        #expect(outcome == .suppressed(.snoozed(description: expectedDescription, expiry: expiry)))
     }
 
     @Test func unsuppressedOptionalVersionYieldsUpdateAvailable() async throws {
@@ -501,7 +513,7 @@ struct UpdateCheckPipelineTests {
 
         #expect(
             outcome
-                == .updateAvailable(
+                == .updatePromptReady(
                     UpdateDescription(
                         installedVersionString: Self.installedVersionString,
                         storeVersionString: Self.storeVersionString,

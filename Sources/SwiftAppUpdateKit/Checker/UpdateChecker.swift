@@ -9,17 +9,33 @@ import Foundation
 import OSLog
 import Observation
 
-/// The observable object that drives the update pipeline, manages the pending update, and
+/// The observable object that drives the update pipeline, manages the update prompt state, and
 /// serializes concurrent check requests.
 @MainActor
 @Observable
 public final class UpdateChecker {
     // MARK: - Observable State
 
-    /// The update that passed every gate on the most recent check, if any.
+    /// Whether the update prompt is ready to be presented.
     ///
-    /// Stays set for the remainder of the process until the user resolves it.
-    public internal(set) var pendingUpdate: UpdateDescription?
+    /// `true` when the most recent check found an update that passed every gate and the user has
+    /// not yet snoozed, skipped, or updated. `false` after any of those actions, and also after
+    /// a check that confirms the installed version matches or exceeds the store version.
+    ///
+    /// Use ``availableUpdate`` to retrieve the update description when this is `true`.
+    public internal(set) var isUpdatePromptReady: Bool = false
+
+    /// A newer store version detected on the most recent check, if any.
+    ///
+    /// Set for any outcome in which the store has a newer, compatible, and sufficiently recent
+    /// version — including versions the policy classifies as silent, versions the user has snoozed,
+    /// and versions the user has skipped. Use it for passive indicators such as a Settings badge
+    /// that should reflect store state regardless of prompt suppression.
+    ///
+    /// Cleared when a check confirms the installed version is current
+    /// (``UpdateCheckOutcome/upToDate`` or ``UpdateCheckOutcome/installedIsNewer``).
+    /// Left unchanged during throttled checks, failed checks, and non-production-build suppressions.
+    public internal(set) var availableUpdate: UpdateDescription?
 
     /// The outcome of the most recent completed check, for diagnostics.
     public internal(set) var lastOutcome: UpdateCheckOutcome?
@@ -94,8 +110,8 @@ public final class UpdateChecker {
 
     /// Runs a check without exposing failures to the caller, for use at launch.
     ///
-    /// Outcomes and failures are both logged. A failure leaves `pendingUpdate` and `lastOutcome`
-    /// unchanged, so the previous values survive a transient error.
+    /// Outcomes and failures are both logged. A failure leaves `isUpdatePromptReady`, `availableUpdate`,
+    /// and `lastOutcome` unchanged, so the previous values survive a transient error.
     public func checkAtLaunch() {
         Task {
             do {
@@ -153,26 +169,27 @@ public final class UpdateChecker {
 
     // MARK: - Presentation
 
-    /// Claims the pending update, transitioning to the presenting state.
+    /// Claims the update prompt, transitioning to the presenting state.
     ///
     /// Returns the update description if claiming succeeded, or `nil` when
-    /// there is no pending update or another presenter already holds it.
+    /// there is no update prompt or another presenter already holds it.
     @discardableResult
-    public func claimPendingUpdate() -> UpdateDescription? {
-        guard let description = self.pendingUpdate,
+    public func claimUpdatePrompt() -> UpdateDescription? {
+        guard self.isUpdatePromptReady,
+            let description = self.availableUpdate,
             self.presentationState != .presenting
         else { return nil }
         self.presentationState = .presenting
         return description
     }
 
-    /// Releases the pending update without writing suppression state, as a withdrawal.
+    /// Releases the update prompt without writing suppression state, as a withdrawal.
     ///
     /// Transitions to awaiting-permission if an update is still pending,
     /// or to nothing-pending if no update remains.
-    public func releasePendingUpdate() {
+    public func releaseUpdatePrompt() {
         guard self.presentationState == .presenting else { return }
-        self.presentationState = self.pendingUpdate != nil ? .awaitingPermission : .noPendingUpdate
+        self.presentationState = self.isUpdatePromptReady ? .awaitingPermission : .noPendingUpdate
     }
 
     // MARK: - Actions
@@ -198,14 +215,14 @@ public final class UpdateChecker {
     public func snooze(_ description: UpdateDescription) async {
         let expiry = self.currentDate().addingTimeInterval(self.configuration.snoozeInterval)
         await self.promptStateStore.recordSnooze(for: description.storeVersionString, expiry: expiry)
-        self.pendingUpdate = nil
+        self.isUpdatePromptReady = false
         self.presentationState = .resolved
     }
 
     /// Permanently skips the given update version, then clears the pending update.
     public func skip(_ description: UpdateDescription) async {
         await self.promptStateStore.recordSkip(for: description.storeVersionString)
-        self.pendingUpdate = nil
+        self.isUpdatePromptReady = false
         self.presentationState = .resolved
     }
 
@@ -226,17 +243,35 @@ public final class UpdateChecker {
 
     private func apply(outcome: UpdateCheckOutcome) {
         self.lastOutcome = outcome
-        guard case .updateAvailable(let description) = outcome else { return }
-        if let existing = self.pendingUpdate,
-            existing.storeVersionString == description.storeVersionString
-        {
-            return
-        }
-        self.pendingUpdate = description
-        // A superseding update during presentation leaves the state as presenting;
-        // the sheet observes pendingUpdate and handles the withdrawal itself.
-        if self.presentationState != .presenting {
-            self.presentationState = .awaitingPermission
+
+        switch outcome {
+        case .updatePromptReady(let description):
+            // Always update availableUpdate; only re-trigger the presentation cycle for a new version.
+            let alreadyPendingThisVersion =
+                self.isUpdatePromptReady
+                && self.availableUpdate?.storeVersionString == description.storeVersionString
+            self.availableUpdate = description
+            guard !alreadyPendingThisVersion else { return }
+            self.isUpdatePromptReady = true
+            // A superseding update during presentation leaves the state as presenting;
+            // the sheet observes availableUpdate and handles the withdrawal itself.
+            if self.presentationState != .presenting {
+                self.presentationState = .awaitingPermission
+            }
+        case .suppressed(.skipped(description: let description)):
+            self.availableUpdate = description
+        case .suppressed(.snoozed(description: let description, _)):
+            self.availableUpdate = description
+        case .upToDate, .installedIsNewer:
+            // The store confirms no newer version — clear both the available update and the pending flag.
+            self.availableUpdate = nil
+            guard self.isUpdatePromptReady else { return }
+            self.isUpdatePromptReady = false
+            self.presentationState = .noPendingUpdate
+        case .suppressed:
+            // Early-exit gates (throttle, non-production build, incompatible OS, release too recent):
+            // leave all state unchanged.
+            break
         }
     }
 }

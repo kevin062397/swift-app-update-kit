@@ -122,7 +122,7 @@ struct UpdateCheckerModifierTests {
         )
 
         #expect(description == nil)
-        #expect(checker.pendingUpdate == nil)
+        #expect(!checker.isUpdatePromptReady)
     }
 
     @Test func cancellationDuringSettleIntervalPreventsClaim() async throws {
@@ -151,7 +151,7 @@ struct UpdateCheckerModifierTests {
         let checker = self.makeChecker()
         try await checker.check(shouldBypassThrottle: true)
 
-        #expect(checker.pendingUpdate != nil)
+        #expect(checker.isUpdatePromptReady)
         #expect(checker.presentationState == .awaitingPermission)
     }
 
@@ -159,7 +159,7 @@ struct UpdateCheckerModifierTests {
 
     @Test func updateArrivingBeforePermissionGrantedIsClaimedOncePermitted() async throws {
         // Ordering A: check completes (update available) before permission is granted.
-        // The modifier sees isPermitted become true with pendingUpdate already set,
+        // The modifier sees isPermitted become true with isUpdatePromptReady already true,
         // starts the task, and claims the update after the settle interval.
         let checker = self.makeChecker()
         try await checker.check(shouldBypassThrottle: true)
@@ -203,16 +203,16 @@ struct UpdateCheckerModifierTests {
     // MARK: - Withdrawal and Exclusivity
 
     @Test func withdrawalReleasesClaimWithoutSuppression() async throws {
-        // Simulates the modifier calling releasePendingUpdate when isPermitted becomes false
+        // Simulates the modifier calling releaseUpdatePrompt when isPermitted becomes false
         // while the sheet is showing.
         let checker = self.makeChecker()
         try await checker.check(shouldBypassThrottle: true)
 
-        _ = checker.claimPendingUpdate()
-        checker.releasePendingUpdate()
+        _ = checker.claimUpdatePrompt()
+        checker.releaseUpdatePrompt()
 
         // Update remains pending; no snooze or skip was recorded.
-        #expect(checker.pendingUpdate != nil)
+        #expect(checker.isUpdatePromptReady)
         #expect(checker.presentationState == .awaitingPermission)
     }
 
@@ -220,8 +220,8 @@ struct UpdateCheckerModifierTests {
         let checker = self.makeChecker()
         try await checker.check(shouldBypassThrottle: true)
 
-        _ = checker.claimPendingUpdate()
-        checker.releasePendingUpdate()
+        _ = checker.claimUpdatePrompt()
+        checker.releaseUpdatePrompt()
 
         // Once released, the next waitAndClaim succeeds and re-enters presenting state.
         let description = await UpdateCheckerModifier.waitAndClaim(
@@ -237,11 +237,11 @@ struct UpdateCheckerModifierTests {
         let checker = self.makeChecker()
         try await checker.check(shouldBypassThrottle: true)
 
-        let firstClaim = checker.claimPendingUpdate()
+        let firstClaim = checker.claimUpdatePrompt()
         #expect(firstClaim != nil)
 
         // A second call (from a second modifier or a manual presenter) gets nothing.
-        let secondClaim = checker.claimPendingUpdate()
+        let secondClaim = checker.claimUpdatePrompt()
         #expect(secondClaim == nil)
         #expect(checker.presentationState == .presenting)
     }

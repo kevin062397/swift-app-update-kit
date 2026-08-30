@@ -166,11 +166,12 @@ private struct MockURLOpener: URLOpener {
 
         let outcome = try await checker.check()
 
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
-        #expect(checker.pendingUpdate == description)
+        #expect(checker.isUpdatePromptReady)
+        #expect(checker.availableUpdate == description)
     }
 
     @Test func pendingUpdateRemainsSetAfterCheckCompletes() async throws {
@@ -179,7 +180,8 @@ private struct MockURLOpener: URLOpener {
 
         _ = try await checker.check()
 
-        #expect(checker.pendingUpdate?.storeVersionString == Self.storeVersionString)
+        #expect(checker.isUpdatePromptReady)
+        #expect(checker.availableUpdate?.storeVersionString == Self.storeVersionString)
     }
 
     @Test func lastOutcomeIsRecordedAfterEachCheck() async throws {
@@ -218,11 +220,11 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source)
 
         _ = try await checker.check()
-        #expect(checker.pendingUpdate?.storeVersionString == Self.storeVersionString)
+        #expect(checker.availableUpdate?.storeVersionString == Self.storeVersionString)
 
         // Override throttle to force a second network request within the same session.
         _ = try await checker.check(shouldBypassThrottle: true)
-        #expect(checker.pendingUpdate?.storeVersionString == Self.newerStoreVersionString)
+        #expect(checker.availableUpdate?.storeVersionString == Self.newerStoreVersionString)
     }
 
     @Test func supersessionWritesNoSuppressionForReplacedVersion() async throws {
@@ -255,12 +257,12 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source)
 
         _ = try await checker.check()
-        let firstPending = checker.pendingUpdate
+        let firstUpdate = checker.availableUpdate
 
         _ = try await checker.check(shouldBypassThrottle: true)
-        let secondPending = checker.pendingUpdate
+        let secondUpdate = checker.availableUpdate
 
-        #expect(firstPending == secondPending)
+        #expect(firstUpdate == secondUpdate)
     }
 
     // MARK: - Presentation State
@@ -279,7 +281,7 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source)
 
         _ = try await checker.check()
-        let claimed = checker.claimPendingUpdate()
+        let claimed = checker.claimUpdatePrompt()
 
         #expect(claimed != nil)
         #expect(checker.presentationState == .presenting)
@@ -290,11 +292,11 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source)
 
         _ = try await checker.check()
-        _ = checker.claimPendingUpdate()
-        checker.releasePendingUpdate()
+        _ = checker.claimUpdatePrompt()
+        checker.releaseUpdatePrompt()
 
         #expect(checker.presentationState == .awaitingPermission)
-        #expect(checker.pendingUpdate != nil)
+        #expect(checker.isUpdatePromptReady)
     }
 
     @Test func secondClaimWhilePresentingReturnsNil() async throws {
@@ -302,8 +304,8 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source)
 
         _ = try await checker.check()
-        _ = checker.claimPendingUpdate()
-        let secondClaim = checker.claimPendingUpdate()
+        _ = checker.claimUpdatePrompt()
+        let secondClaim = checker.claimUpdatePrompt()
 
         #expect(secondClaim == nil)
         #expect(checker.presentationState == .presenting)
@@ -317,8 +319,8 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source, promptStateStore: store)
 
         let outcome = try await checker.check()
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
         await checker.snooze(description)
@@ -329,7 +331,7 @@ private struct MockURLOpener: URLOpener {
             snoozeInterval: 86400
         )
         #expect(expiry != nil)
-        #expect(checker.pendingUpdate == nil)
+        #expect(!checker.isUpdatePromptReady)
         #expect(checker.presentationState == .resolved)
     }
 
@@ -339,8 +341,8 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source, promptStateStore: store)
 
         let outcome = try await checker.check()
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
         await checker.snooze(description)
@@ -357,15 +359,15 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source, promptStateStore: store)
 
         let outcome = try await checker.check()
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
         await checker.skip(description)
 
         let isSkipped = await store.isVersionSkipped(Self.storeVersionString)
         #expect(isSkipped == true)
-        #expect(checker.pendingUpdate == nil)
+        #expect(!checker.isUpdatePromptReady)
         #expect(checker.presentationState == .resolved)
     }
 
@@ -375,8 +377,8 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source, promptStateStore: store)
 
         let outcome = try await checker.check()
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
         await checker.skip(description)
@@ -389,6 +391,120 @@ private struct MockURLOpener: URLOpener {
         #expect(snoozeExpiry == nil)
     }
 
+    // MARK: - Available Update
+
+    @Test func checkSetsAvailableUpdateWhenUpdateIsAvailable() async throws {
+        let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let checker = self.makeChecker(updateSource: source)
+
+        let outcome = try await checker.check()
+
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
+            return
+        }
+        #expect(checker.availableUpdate == description)
+    }
+
+    @Test func snoozeDoesNotClearAvailableUpdate() async throws {
+        let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let checker = self.makeChecker(updateSource: source)
+
+        let outcome = try await checker.check()
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
+            return
+        }
+        await checker.snooze(description)
+
+        #expect(!checker.isUpdatePromptReady)
+        #expect(checker.availableUpdate == description)
+    }
+
+    @Test func skipDoesNotClearAvailableUpdate() async throws {
+        let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let checker = self.makeChecker(updateSource: source)
+
+        let outcome = try await checker.check()
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
+            return
+        }
+        await checker.skip(description)
+
+        #expect(!checker.isUpdatePromptReady)
+        #expect(checker.availableUpdate == description)
+    }
+
+    @Test func snoozedVersionSetsAvailableUpdateOnNextCheck() async throws {
+        let store = InMemoryPromptStateStore()
+        let expiry = self.referenceDate.addingTimeInterval(3600)
+        await store.recordSnooze(for: Self.storeVersionString, expiry: expiry)
+        let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let checker = self.makeChecker(updateSource: source, promptStateStore: store)
+
+        _ = try await checker.check(shouldBypassThrottle: true)
+
+        #expect(checker.availableUpdate?.storeVersionString == Self.storeVersionString)
+        #expect(!checker.isUpdatePromptReady)
+    }
+
+    @Test func skippedVersionSetsAvailableUpdateOnNextCheck() async throws {
+        let store = InMemoryPromptStateStore()
+        await store.recordSkip(for: Self.storeVersionString)
+        let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let checker = self.makeChecker(updateSource: source, promptStateStore: store)
+
+        _ = try await checker.check(shouldBypassThrottle: true)
+
+        #expect(checker.availableUpdate?.storeVersionString == Self.storeVersionString)
+        #expect(!checker.isUpdatePromptReady)
+    }
+
+    @Test func upToDateCheckClearsAvailableUpdate() async throws {
+        let source = SequencedMockUpdateSource(sequence: [
+            self.makeStoreMetadata(versionString: Self.storeVersionString),
+            self.makeStoreMetadata(versionString: Self.installedVersionString),
+        ])
+        let checker = self.makeChecker(updateSource: source)
+
+        _ = try await checker.check()
+        #expect(checker.availableUpdate != nil)
+
+        _ = try await checker.check(shouldBypassThrottle: true)
+        #expect(checker.availableUpdate == nil)
+        #expect(!checker.isUpdatePromptReady)
+    }
+
+    @Test func installedIsNewerCheckClearsAvailableUpdate() async throws {
+        let source = SequencedMockUpdateSource(sequence: [
+            self.makeStoreMetadata(versionString: Self.storeVersionString),
+            self.makeStoreMetadata(versionString: "1.3.0"),  // older than installed 1.4.2
+        ])
+        let checker = self.makeChecker(updateSource: source)
+
+        _ = try await checker.check()
+        #expect(checker.availableUpdate != nil)
+        #expect(checker.isUpdatePromptReady)
+
+        _ = try await checker.check(shouldBypassThrottle: true)
+        #expect(checker.availableUpdate == nil)
+        #expect(!checker.isUpdatePromptReady)
+    }
+
+    @Test func throttledCheckLeavesAvailableUpdateUnchanged() async throws {
+        let store = InMemoryPromptStateStore()
+        let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let checker = self.makeChecker(updateSource: source, promptStateStore: store)
+
+        _ = try await checker.check()
+        let firstAvailableUpdate = checker.availableUpdate
+        #expect(firstAvailableUpdate != nil)
+
+        _ = try await checker.check()
+        #expect(checker.availableUpdate == firstAvailableUpdate)
+    }
+
     // MARK: - Actions: Update Now
 
     @Test func updateNowOpensAppStoreURLFirst() async throws {
@@ -397,8 +513,8 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source, urlOpener: MockURLOpener(record: urlRecord))
 
         let outcome = try await checker.check()
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
         await checker.updateNow(for: description)
@@ -414,8 +530,8 @@ private struct MockURLOpener: URLOpener {
         let checker = self.makeChecker(updateSource: source, urlOpener: MockURLOpener(record: urlRecord))
 
         let outcome = try await checker.check()
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
         await checker.updateNow(for: description)
@@ -437,8 +553,8 @@ private struct MockURLOpener: URLOpener {
         )
 
         let outcome = try await checker.check()
-        guard case .updateAvailable(let description) = outcome else {
-            Issue.record("Expected updateAvailable, got \(outcome)")
+        guard case .updatePromptReady(let description) = outcome else {
+            Issue.record("Expected updatePromptReady, got \(outcome)")
             return
         }
         await checker.updateNow(for: description)
@@ -452,6 +568,6 @@ private struct MockURLOpener: URLOpener {
         #expect(isSkipped == false)
         #expect(snoozeExpiry == nil)
         // The sheet stays on screen while the user is in the App Store, so the update stays pending.
-        #expect(checker.pendingUpdate != nil)
+        #expect(checker.isUpdatePromptReady)
     }
 }
