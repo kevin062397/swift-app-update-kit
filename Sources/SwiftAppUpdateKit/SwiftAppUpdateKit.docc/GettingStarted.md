@@ -11,7 +11,7 @@ SwiftAppUpdateKit offers two ways to integrate update prompts:
 
 **The deciding question:** if the `isPermitted` condition on the automatic modifier already covers your case — for example, "don't show until onboarding is complete" — use the automatic path. Reach for manual presentation only when you need to slot the update sheet into a presentation hierarchy or navigation flow that the modifier cannot express.
 
-## Step 1: Declare a Policy
+## Declare a Policy
 
 ``UpdateCheckConfiguration`` requires an ``UpdatePolicy``. The policy maps each version classification to a requirement, and there is no default — the right mapping depends entirely on what your version numbers mean to your users.
 
@@ -28,7 +28,7 @@ let policy = UpdatePolicy(
 let configuration = UpdateCheckConfiguration(policy: policy)
 ```
 
-## Automatic Entry Point — No Condition
+## Automatic Presentation
 
 Attach `.checkForUpdates(using:)` to your root view. The library fires a check on first appearance and presents the sheet once an update is available.
 
@@ -50,7 +50,7 @@ struct MyApp: App {
 }
 ```
 
-## Automatic Entry Point — With a Permission Condition
+### Delaying Presentation
 
 Pass `isPermitted` to delay presentation until a condition you supply becomes true. The check still runs at launch — only the sheet waits.
 
@@ -73,7 +73,7 @@ Revoking `isPermitted` while the sheet is visible withdraws the prompt without r
 
 ## Manual Presentation
 
-Use ``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/claimPendingUpdate()`` to manage the sheet yourself. This path gives you full control over where and when the prompt appears.
+Use ``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/claimUpdatePrompt()`` to manage the sheet yourself. This path gives you full control over where and when the prompt appears.
 
 ```swift
 @main
@@ -96,11 +96,11 @@ struct MyApp: App {
                         )
                     }
                 }
-                .onChange(of: checker.pendingUpdate) { _, update in
-                    if update != nil, let description = checker.claimPendingUpdate() {
+                .onChange(of: checker.isUpdatePromptReady) { _, isReady in
+                    if isReady, let description = checker.claimUpdatePrompt() {
                         presentedDescription = description
                         isSheetPresented = true
-                    } else if update == nil {
+                    } else if !isReady {
                         isSheetPresented = false
                         presentedDescription = nil
                     }
@@ -127,6 +127,21 @@ UpdatePromptView(
     onSkip: { Task { await checker.skip(description) } }
 )
 ```
+
+## Available Update
+
+``UpdateChecker/availableUpdate`` reports the current store update independently of whether the user has snoozed or skipped the prompt — without affecting whether the sheet appears.
+
+```swift
+// checker is @Observable, so this view re-renders automatically.
+if checker.availableUpdate != nil {
+    UpdateAvailableView()
+}
+```
+
+`availableUpdate` is set when a check finds a newer, compatible, and sufficiently recent store version — including versions the policy classifies as silent and versions the user has snoozed or skipped. Only a check that confirms the installed version is current clears it. Throttled and failed checks leave it unchanged, so a transient network failure never clears it.
+
+Because `checker` is `@Observable`, SwiftUI views that read `checker.availableUpdate` update automatically whenever it changes.
 
 ## Next Steps
 

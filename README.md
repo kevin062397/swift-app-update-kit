@@ -86,7 +86,9 @@ struct MyApp: App {
 
 The modifier fires a check on first appearance and presents the update sheet once an update passes every gate.
 
-## Delaying Presentation
+## Controlling Presentation
+
+### Delaying Presentation
 
 Pass `isPermitted` to hold the sheet until a condition becomes true. The check still runs at launch — only the sheet waits.
 
@@ -96,9 +98,13 @@ Pass `isPermitted` to hold the sheet until a condition becomes true. The check s
 
 Revoking `isPermitted` while the sheet is visible withdraws it without recording any suppression state, so the same update can be re-presented once permission is re-granted.
 
-## Manual Presentation
+### Manual Presentation
 
-Use `checkAtLaunch()` and `claimPendingUpdate()` when you need to slot the sheet into a custom presentation hierarchy, or to pass a custom `UpdatePromptStrings` to override any user-visible label. See [Getting Started](Sources/SwiftAppUpdateKit/SwiftAppUpdateKit.docc/GettingStarted.md) for a complete walkthrough of both.
+Use `checkAtLaunch()` and `claimUpdatePrompt()` when you need to slot the sheet into a custom presentation hierarchy, or to pass a custom `UpdatePromptStrings` to override any user-visible label. See [Getting Started](Sources/SwiftAppUpdateKit/SwiftAppUpdateKit.docc/GettingStarted.md) for a complete walkthrough of both.
+
+## Available Update
+
+`availableUpdate` is set when a check finds a newer, compatible, and sufficiently recent store version — including versions the policy classifies as silent and versions the user has snoozed or skipped. It is cleared when a check confirms the installed version is current. Throttled and failed checks leave it unchanged. See [Getting Started](Sources/SwiftAppUpdateKit/SwiftAppUpdateKit.docc/GettingStarted.md) for a usage example.
 
 ## Configuration
 
