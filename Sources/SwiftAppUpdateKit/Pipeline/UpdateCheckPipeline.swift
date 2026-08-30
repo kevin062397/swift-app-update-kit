@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 // MARK: - Bundle Metadata
 
@@ -97,6 +98,7 @@ struct UpdateCheckPipeline {
             if let lastCheck = await self.promptStateStore.lastCheckDate(currentDate: now) {
                 let nextEligibleDate = lastCheck.addingTimeInterval(self.configuration.throttleInterval)
                 if now < nextEligibleDate {
+                    pipelineLogger.info("Suppressed: throttled — next check at \(String(describing: nextEligibleDate), privacy: .public)")
                     return .suppressed(.throttled(nextEligibleDate: nextEligibleDate))
                 }
             }
@@ -107,6 +109,7 @@ struct UpdateCheckPipeline {
         if !self.shouldBypassProductionBuildCheck,
             await !self.buildEnvironmentDetector.isProductionBuild()
         {
+            pipelineLogger.info("Suppressed: non-production build")
             return .suppressed(.nonProductionBuild)
         }
 
@@ -114,6 +117,9 @@ struct UpdateCheckPipeline {
         guard let bundleMetadata = self.bundleMetadataProvider() else {
             throw .missingBundleMetadata
         }
+        pipelineLogger.info(
+            "Checking \(bundleMetadata.bundleIdentifier, privacy: .public) — installed \(bundleMetadata.installedVersionString, privacy: .public)"
+        )
 
         // Gate 4: Request store metadata.
         let storefrontCode = await self.storefrontResolver.resolveStorefrontCountryCode()
@@ -126,6 +132,7 @@ struct UpdateCheckPipeline {
         } catch {
             throw error.asUpdateCheckFailure()
         }
+        pipelineLogger.info("Store version: \(storeMetadata.versionString, privacy: .public)")
 
         // Gate 5: Record successful check time.
         // Must run immediately after a successful fetch and never after a failure, so that a single
@@ -135,6 +142,9 @@ struct UpdateCheckPipeline {
         // Gate 6: Minimum OS version at most the running OS.
         let runningOS = self.currentOSVersion()
         if storeMetadata.minimumOperatingSystemVersion > runningOS {
+            pipelineLogger.info(
+                "Suppressed: store version requires iOS \(String(describing: storeMetadata.minimumOperatingSystemVersion), privacy: .public) — device runs \(String(describing: runningOS), privacy: .public)"
+            )
             return .suppressed(
                 .incompatibleWithDeviceOS(
                     requiredVersion: storeMetadata.minimumOperatingSystemVersion,
@@ -146,6 +156,7 @@ struct UpdateCheckPipeline {
         // Gate 7: Release at least the minimum release age old.
         let eligibleDate = storeMetadata.releaseDate.addingTimeInterval(self.configuration.minimumReleaseAge)
         if now < eligibleDate {
+            pipelineLogger.info("Suppressed: release too recent — eligible at \(String(describing: eligibleDate), privacy: .public)")
             return .suppressed(
                 .releaseTooRecent(
                     releaseDate: storeMetadata.releaseDate,
@@ -156,9 +167,13 @@ struct UpdateCheckPipeline {
 
         // Gate 8: Compare versions.
         if bundleMetadata.installedVersion == storeMetadata.version {
+            pipelineLogger.info("Up to date (\(bundleMetadata.installedVersionString, privacy: .public))")
             return .upToDate
         }
         if bundleMetadata.installedVersion > storeMetadata.version {
+            pipelineLogger.info(
+                "Installed (\(bundleMetadata.installedVersionString, privacy: .public)) is ahead of store (\(storeMetadata.versionString, privacy: .public))"
+            )
             return .installedIsNewer
         }
 
@@ -175,12 +190,16 @@ struct UpdateCheckPipeline {
 
         // Gate 9: Policy requirement.
         if requirement == .silent {
+            pipelineLogger.info(
+                "Suppressed: \(String(describing: classification), privacy: .public) difference is silent by policy — store \(storeMetadata.versionString, privacy: .public)"
+            )
             return .suppressed(.silentByPolicy(description: description, classification: classification))
         }
 
         if requirement == .optional {
             // Gate 10: Version not skipped.
             if await self.promptStateStore.isVersionSkipped(storeMetadata.versionString) {
+                pipelineLogger.info("Suppressed: \(storeMetadata.versionString, privacy: .public) was skipped by user")
                 return .suppressed(.skipped(description: description))
             }
 
@@ -190,6 +209,9 @@ struct UpdateCheckPipeline {
                 currentDate: now,
                 snoozeInterval: self.configuration.snoozeInterval
             ), now < expiry {
+                pipelineLogger.info(
+                    "Suppressed: \(storeMetadata.versionString, privacy: .public) is snoozed until \(String(describing: expiry), privacy: .public)"
+                )
                 return .suppressed(.snoozed(description: description, expiry: expiry))
             }
         }
@@ -197,6 +219,16 @@ struct UpdateCheckPipeline {
         // makes the requirement meaningful.
 
         await self.promptStateStore.pruneEntries(olderThan: storeMetadata.version)
+        pipelineLogger.info(
+            "Update prompt ready: \(bundleMetadata.installedVersionString, privacy: .public) → \(storeMetadata.versionString, privacy: .public) (\(String(describing: requirement), privacy: .public))"
+        )
         return .updatePromptReady(description)
     }
 }
+
+// MARK: - Logger
+
+private let pipelineLogger = Logger(
+    subsystem: "com.swiftappupdatekit",
+    category: "UpdateCheckPipeline"
+)

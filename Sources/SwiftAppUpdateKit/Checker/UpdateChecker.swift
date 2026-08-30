@@ -180,6 +180,7 @@ public final class UpdateChecker {
             self.presentationState != .presenting
         else { return nil }
         self.presentationState = .presenting
+        checkerLogger.info("Update prompt claimed for \(description.storeVersionString, privacy: .public)")
         return description
     }
 
@@ -189,6 +190,7 @@ public final class UpdateChecker {
     /// or to nothing-pending if no update remains.
     public func releaseUpdatePrompt() {
         guard self.presentationState == .presenting else { return }
+        checkerLogger.info("Update prompt withdrawn without resolution")
         self.presentationState = self.isUpdatePromptReady ? .awaitingPermission : .noPendingUpdate
     }
 
@@ -214,6 +216,7 @@ public final class UpdateChecker {
     /// Snoozes the given update for the configured snooze interval, then clears the pending update.
     public func snooze(_ description: UpdateDescription) async {
         let expiry = self.currentDate().addingTimeInterval(self.configuration.snoozeInterval)
+        checkerLogger.info("Version \(description.storeVersionString, privacy: .public) snoozed until \(String(describing: expiry), privacy: .public)")
         await self.promptStateStore.recordSnooze(for: description.storeVersionString, expiry: expiry)
         self.isUpdatePromptReady = false
         self.presentationState = .resolved
@@ -221,6 +224,7 @@ public final class UpdateChecker {
 
     /// Permanently skips the given update version, then clears the pending update.
     public func skip(_ description: UpdateDescription) async {
+        checkerLogger.info("Version \(description.storeVersionString, privacy: .public) skipped permanently")
         await self.promptStateStore.recordSkip(for: description.storeVersionString)
         self.isUpdatePromptReady = false
         self.presentationState = .resolved
@@ -257,6 +261,7 @@ public final class UpdateChecker {
             // the sheet observes availableUpdate and handles the withdrawal itself.
             if self.presentationState != .presenting {
                 self.presentationState = .awaitingPermission
+                checkerLogger.info("Update \(description.storeVersionString, privacy: .public) ready — awaiting presentation permission")
             }
         case .suppressed(.skipped(description: let description)):
             self.availableUpdate = description
