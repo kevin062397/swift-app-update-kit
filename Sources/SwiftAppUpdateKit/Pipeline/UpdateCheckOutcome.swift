@@ -61,7 +61,7 @@ public enum SuppressionReason: Equatable, Sendable {
     /// The store version was published too recently to have cleared the minimum release-age gate.
     case releaseTooRecent(releaseDate: Date, eligibleDate: Date)
     /// The configured policy maps this version classification to a silent requirement.
-    case silentByPolicy(classification: VersionClassification)
+    case silentByPolicy(description: UpdateDescription, classification: VersionClassification)
     /// The user permanently skipped this version.
     case skipped(description: UpdateDescription)
     /// The user snoozed this version and the snooze has not yet expired.
@@ -87,7 +87,12 @@ public enum UpdateCheckOutcome: Equatable, Sendable {
 
 // MARK: - Update Description
 
-/// The update that passed every gate and is ready to present.
+/// A newer store version detected by the pipeline.
+///
+/// Appears in ``UpdateCheckOutcome/updatePromptReady(_:)`` when the update is ready to present,
+/// and in ``SuppressionReason/silentByPolicy(description:classification:)``,
+/// ``SuppressionReason/skipped(description:)``, and ``SuppressionReason/snoozed(description:expiry:)``
+/// when the prompt was suppressed.
 public struct UpdateDescription: Equatable, Sendable {
     /// The version string of the currently installed app, as read from the bundle.
     public let installedVersionString: String

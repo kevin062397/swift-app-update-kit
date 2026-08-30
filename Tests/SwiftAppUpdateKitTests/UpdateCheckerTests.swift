@@ -492,6 +492,39 @@ private struct MockURLOpener: URLOpener {
         #expect(!checker.isUpdatePromptReady)
     }
 
+    @Test func silentPolicySetsAvailableUpdateWithoutPrompt() async throws {
+        let allSilentPolicy = UpdatePolicy(
+            major: .silent,
+            minor: .silent,
+            patch: .silent,
+            revision: .silent
+        )
+        let installedVersionString = Self.installedVersionString
+        let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let checker = UpdateChecker(
+            configuration: UpdateCheckConfiguration(policy: allSilentPolicy),
+            promptStateStore: InMemoryPromptStateStore(),
+            buildEnvironmentDetector: CheckerMockBuildEnvironmentDetector(isProduction: true),
+            updateSource: source,
+            storefrontResolver: CheckerMockStorefrontResolver(),
+            urlOpener: MockURLOpener(record: URLOpenRecord()),
+            currentDate: { self.referenceDate },
+            currentOSVersion: { AppVersion("17.0") },
+            bundleMetadataProvider: {
+                BundleMetadata(
+                    bundleIdentifier: "com.example.app",
+                    installedVersionString: installedVersionString,
+                    installedVersion: AppVersion(installedVersionString)
+                )
+            }
+        )
+
+        _ = try await checker.check(shouldBypassThrottle: true)
+
+        #expect(checker.availableUpdate?.storeVersionString == Self.storeVersionString)
+        #expect(!checker.isUpdatePromptReady)
+    }
+
     @Test func throttledCheckLeavesAvailableUpdateUnchanged() async throws {
         let store = InMemoryPromptStateStore()
         let source = CheckerMockUpdateSource(result: .success(self.makeStoreMetadata()))

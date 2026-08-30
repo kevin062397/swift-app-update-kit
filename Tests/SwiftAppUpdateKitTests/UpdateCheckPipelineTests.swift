@@ -421,7 +421,13 @@ struct UpdateCheckPipelineTests {
         let outcome = try await pipeline.run()
 
         // 1.4.2 → 1.5.0 is a minor difference
-        #expect(outcome == .suppressed(.silentByPolicy(classification: .minor)))
+        let expectedDescription = UpdateDescription(
+            installedVersionString: Self.installedVersionString,
+            storeVersionString: Self.storeVersionString,
+            requirement: .silent,
+            metadata: self.makeStoreMetadata()
+        )
+        #expect(outcome == .suppressed(.silentByPolicy(description: expectedDescription, classification: .minor)))
     }
 
     @Test func requiredPolicyYieldsUpdateAvailableIgnoringSkipAndSnooze() async throws {

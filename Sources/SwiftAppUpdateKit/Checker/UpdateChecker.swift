@@ -262,6 +262,12 @@ public final class UpdateChecker {
             self.availableUpdate = description
         case .suppressed(.snoozed(description: let description, _)):
             self.availableUpdate = description
+        case .suppressed(.silentByPolicy(description: let description, _)):
+            // The policy suppressed the prompt, but the store still has a newer version.
+            self.availableUpdate = description
+            guard self.isUpdatePromptReady else { return }
+            self.isUpdatePromptReady = false
+            self.presentationState = .noPendingUpdate
         case .upToDate, .installedIsNewer:
             // The store confirms no newer version — clear both the available update and the pending flag.
             self.availableUpdate = nil

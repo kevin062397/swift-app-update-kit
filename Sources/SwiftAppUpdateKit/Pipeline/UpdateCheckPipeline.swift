@@ -175,7 +175,7 @@ struct UpdateCheckPipeline {
 
         // Gate 9: Policy requirement.
         if requirement == .silent {
-            return .suppressed(.silentByPolicy(classification: classification))
+            return .suppressed(.silentByPolicy(description: description, classification: classification))
         }
 
         if requirement == .optional {
