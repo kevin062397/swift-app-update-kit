@@ -94,43 +94,47 @@ struct UpdateCheckPipeline {
         // Gate 1: Outside throttle window (or throttle bypassed).
         // Environment detection moves after this gate because its StoreKit lookup can take up to 3 s
         // on first access; throttled launches — the common case — skip the gate entirely.
-        pipelineLogger.info("Gate 1: Checking throttle window")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 1: Checking throttle window")
         if !self.shouldBypassThrottle {
             if let lastCheck = await self.promptStateStore.lastCheckDate(currentDate: now) {
                 let nextEligibleDate = lastCheck.addingTimeInterval(self.configuration.throttleInterval)
                 if now < nextEligibleDate {
-                    pipelineLogger.info(
-                        "Gate 1 suppressed: throttled — next check at \(String(describing: nextEligibleDate), privacy: .public)"
+                    Logger.updateCheckPipeline.info(
+                        "[\(Self.self)] \(#function): Gate 1 suppressed: throttled — next check at \(String(describing: nextEligibleDate), privacy: .public)"
                     )
                     return .suppressed(.throttled(nextEligibleDate: nextEligibleDate))
                 }
             }
         }
-        pipelineLogger.info("Gate 1 passed: throttle window cleared")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 1 passed: throttle window cleared")
 
         // Gate 2: Production build.
         // Placed after the throttle gate so that the StoreKit lookup is skipped on throttled launches.
-        pipelineLogger.info("Gate 2: Checking build environment")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2: Checking build environment")
         if !self.shouldBypassProductionBuildCheck,
             await !self.buildEnvironmentDetector.isProductionBuild()
         {
-            pipelineLogger.info("Gate 2 suppressed: non-production build")
+            Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2 suppressed: non-production build")
             return .suppressed(.nonProductionBuild)
         }
-        pipelineLogger.info("Gate 2 passed: production build confirmed")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2 passed: production build confirmed")
 
         // Gate 3: Read bundle identifier and installed version.
-        pipelineLogger.info("Gate 3: Reading bundle metadata from Info.plist")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 3: Reading bundle metadata from Info.plist")
         guard let bundleMetadata = self.bundleMetadataProvider() else {
-            pipelineLogger.error("Gate 3 failed: bundle identifier or version string missing from Info.plist")
+            Logger.updateCheckPipeline.error(
+                "[\(Self.self)] \(#function): Gate 3 failed: bundle identifier or version string missing from Info.plist"
+            )
             throw .missingBundleMetadata
         }
-        pipelineLogger.info(
-            "Gate 3 passed: \(bundleMetadata.bundleIdentifier, privacy: .public) — installed \(bundleMetadata.installedVersionString, privacy: .public)"
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 3 passed: \(bundleMetadata.bundleIdentifier, privacy: .public) — installed \(bundleMetadata.installedVersionString, privacy: .public)"
         )
 
         // Gate 4: Request store metadata.
-        pipelineLogger.info("Gate 4: Fetching store metadata for \(bundleMetadata.bundleIdentifier, privacy: .public)")
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 4: Fetching store metadata for \(bundleMetadata.bundleIdentifier, privacy: .public)"
+        )
         let storefrontCode = await self.storefrontResolver.resolveStorefrontCountryCode()
         let storeMetadata: AppStoreMetadata
         do throws(LookupRequestError) {
@@ -139,10 +143,14 @@ struct UpdateCheckPipeline {
                 storefrontCountryCode: storefrontCode
             )
         } catch {
-            pipelineLogger.error("Gate 4 failed: \(String(describing: error), privacy: .public)")
+            Logger.updateCheckPipeline.error(
+                "[\(Self.self)] \(#function): Gate 4 failed: \(String(describing: error), privacy: .public)"
+            )
             throw error.asUpdateCheckFailure()
         }
-        pipelineLogger.info("Gate 4 passed: store version \(storeMetadata.versionString, privacy: .public)")
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 4 passed: store version \(storeMetadata.versionString, privacy: .public)"
+        )
 
         // Gate 5: Record successful check time.
         // Must run immediately after a successful fetch and never after a failure, so that a single
@@ -150,11 +158,11 @@ struct UpdateCheckPipeline {
         await self.promptStateStore.recordLastCheckDate(now)
 
         // Gate 6: Minimum OS version at most the running OS.
-        pipelineLogger.info("Gate 6: Checking OS compatibility")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 6: Checking OS compatibility")
         let runningOS = self.currentOSVersion()
         if storeMetadata.minimumOperatingSystemVersion > runningOS {
-            pipelineLogger.info(
-                "Gate 6 suppressed: store version requires iOS \(String(describing: storeMetadata.minimumOperatingSystemVersion), privacy: .public) — device runs \(String(describing: runningOS), privacy: .public)"
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 6 suppressed: store version requires iOS \(String(describing: storeMetadata.minimumOperatingSystemVersion), privacy: .public) — device runs \(String(describing: runningOS), privacy: .public)"
             )
             return .suppressed(
                 .incompatibleWithDeviceOS(
@@ -163,16 +171,16 @@ struct UpdateCheckPipeline {
                 )
             )
         }
-        pipelineLogger.info(
-            "Gate 6 passed: OS compatible — device iOS \(String(describing: runningOS), privacy: .public), store requires iOS \(String(describing: storeMetadata.minimumOperatingSystemVersion), privacy: .public)"
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 6 passed: OS compatible — device iOS \(String(describing: runningOS), privacy: .public), store requires iOS \(String(describing: storeMetadata.minimumOperatingSystemVersion), privacy: .public)"
         )
 
         // Gate 7: Release at least the minimum release age old.
-        pipelineLogger.info("Gate 7: Checking release age")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 7: Checking release age")
         let eligibleDate = storeMetadata.releaseDate.addingTimeInterval(self.configuration.minimumReleaseAge)
         if now < eligibleDate {
-            pipelineLogger.info(
-                "Gate 7 suppressed: release too recent — eligible at \(String(describing: eligibleDate), privacy: .public)"
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 7 suppressed: release too recent — eligible at \(String(describing: eligibleDate), privacy: .public)"
             )
             return .suppressed(
                 .releaseTooRecent(
@@ -181,30 +189,32 @@ struct UpdateCheckPipeline {
                 )
             )
         }
-        pipelineLogger.info(
-            "Gate 7 passed: version released \(String(describing: storeMetadata.releaseDate), privacy: .public)"
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 7 passed: version released \(String(describing: storeMetadata.releaseDate), privacy: .public)"
         )
 
         // Gate 8: Compare versions.
-        pipelineLogger.info(
-            "Gate 8: Comparing versions — installed \(bundleMetadata.installedVersionString, privacy: .public), store \(storeMetadata.versionString, privacy: .public)"
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 8: Comparing versions — installed \(bundleMetadata.installedVersionString, privacy: .public), store \(storeMetadata.versionString, privacy: .public)"
         )
         if bundleMetadata.installedVersion == storeMetadata.version {
-            pipelineLogger.info(
-                "Gate 8 exited: up to date (\(bundleMetadata.installedVersionString, privacy: .public))"
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 8 exited: up to date (\(bundleMetadata.installedVersionString, privacy: .public))"
             )
             return .upToDate
         }
         if bundleMetadata.installedVersion > storeMetadata.version {
-            pipelineLogger.info(
-                "Gate 8 exited: installed (\(bundleMetadata.installedVersionString, privacy: .public)) is ahead of store (\(storeMetadata.versionString, privacy: .public))"
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 8 exited: installed (\(bundleMetadata.installedVersionString, privacy: .public)) is ahead of store (\(storeMetadata.versionString, privacy: .public))"
             )
             return .installedIsNewer
         }
 
         // Gate 8 cleared: the store has a newer version. Build its full description before the
         // suppression gates so that every downstream outcome can carry it.
-        pipelineLogger.info("Gate 8 passed: store \(storeMetadata.versionString, privacy: .public) is newer")
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 8 passed: store \(storeMetadata.versionString, privacy: .public) is newer"
+        )
         let classification = AppVersion.classify(bundleMetadata.installedVersion, storeMetadata.version)!
         let requirement = self.configuration.policy.requirement(for: classification)
         let description = UpdateDescription(
@@ -215,58 +225,59 @@ struct UpdateCheckPipeline {
         )
 
         // Gate 9: Policy requirement.
-        pipelineLogger.info(
-            "Gate 9: Applying policy for \(String(describing: classification), privacy: .public) update"
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 9: Applying policy for \(String(describing: classification), privacy: .public) update"
         )
         if requirement == .silent {
-            pipelineLogger.info(
-                "Gate 9 suppressed: \(String(describing: classification), privacy: .public) difference is silent by policy — store \(storeMetadata.versionString, privacy: .public)"
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 9 suppressed: \(String(describing: classification), privacy: .public) difference is silent by policy — store \(storeMetadata.versionString, privacy: .public)"
             )
             return .suppressed(.silentByPolicy(description: description, classification: classification))
         }
-        pipelineLogger.info(
-            "Gate 9 passed: \(String(describing: requirement), privacy: .public) requirement for \(String(describing: classification), privacy: .public) update"
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Gate 9 passed: \(String(describing: requirement), privacy: .public) requirement for \(String(describing: classification), privacy: .public) update"
         )
 
         if requirement == .optional {
             // Gate 10: Version not skipped.
-            pipelineLogger.info("Gate 10: Checking skip state for \(storeMetadata.versionString, privacy: .public)")
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 10: Checking skip state for \(storeMetadata.versionString, privacy: .public)"
+            )
             if await self.promptStateStore.isVersionSkipped(storeMetadata.versionString) {
-                pipelineLogger.info(
-                    "Gate 10 suppressed: \(storeMetadata.versionString, privacy: .public) was skipped by user"
+                Logger.updateCheckPipeline.info(
+                    "[\(Self.self)] \(#function): Gate 10 suppressed: \(storeMetadata.versionString, privacy: .public) was skipped by user"
                 )
                 return .suppressed(.skipped(description: description))
             }
-            pipelineLogger.info("Gate 10 passed: \(storeMetadata.versionString, privacy: .public) not skipped")
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 10 passed: \(storeMetadata.versionString, privacy: .public) not skipped"
+            )
 
             // Gate 11: Version not snoozed.
-            pipelineLogger.info("Gate 11: Checking snooze state for \(storeMetadata.versionString, privacy: .public)")
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 11: Checking snooze state for \(storeMetadata.versionString, privacy: .public)"
+            )
             if let expiry = await self.promptStateStore.snoozeExpiry(
                 for: storeMetadata.versionString,
                 currentDate: now,
                 snoozeInterval: self.configuration.snoozeInterval
             ), now < expiry {
-                pipelineLogger.info(
-                    "Gate 11 suppressed: \(storeMetadata.versionString, privacy: .public) is snoozed until \(String(describing: expiry), privacy: .public)"
+                Logger.updateCheckPipeline.info(
+                    "[\(Self.self)] \(#function): Gate 11 suppressed: \(storeMetadata.versionString, privacy: .public) is snoozed until \(String(describing: expiry), privacy: .public)"
                 )
                 return .suppressed(.snoozed(description: description, expiry: expiry))
             }
-            pipelineLogger.info("Gate 11 passed: \(storeMetadata.versionString, privacy: .public) not snoozed")
+            Logger.updateCheckPipeline.info(
+                "[\(Self.self)] \(#function): Gate 11 passed: \(storeMetadata.versionString, privacy: .public) not snoozed"
+            )
         }
         // Gates 10 and 11 do not apply to required updates: the skip/snooze state is what
         // makes the requirement meaningful.
 
         await self.promptStateStore.pruneEntries(olderThan: storeMetadata.version)
-        pipelineLogger.info(
-            "Update prompt ready: \(bundleMetadata.installedVersionString, privacy: .public) → \(storeMetadata.versionString, privacy: .public) (\(String(describing: requirement), privacy: .public))"
+        Logger.updateCheckPipeline.info(
+            "[\(Self.self)] \(#function): Update prompt ready: \(bundleMetadata.installedVersionString, privacy: .public) → \(storeMetadata.versionString, privacy: .public) (\(String(describing: requirement), privacy: .public))"
         )
         return .updatePromptReady(description)
     }
 }
-
-// MARK: - Logger
-
-private let pipelineLogger = Logger(
-    subsystem: "com.swiftappupdatekit",
-    category: "UpdateCheckPipeline"
-)

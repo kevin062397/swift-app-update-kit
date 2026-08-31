@@ -39,8 +39,8 @@ struct BuildEnvironmentDetectionStrategy {
         } catch {
             // Fail toward production: disabling checking for all users on a lookup
             // failure would be worse than emitting a redundant prompt in a TestFlight build.
-            buildEnvironmentLogger.error(
-                "App transaction environment lookup failed: \(String(describing: error), privacy: .public). Treating as a production build."
+            Logger.buildEnvironmentDetector.error(
+                "[\(Self.self)] \(#function): App transaction environment lookup failed: \(String(describing: error), privacy: .public). Treating as a production build."
             )
             return true
         }
@@ -85,10 +85,3 @@ struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
         return (kinfo.kp_proc.p_flag & P_TRACED) != 0
     }
 }
-
-// MARK: - Logger
-
-private let buildEnvironmentLogger = Logger(
-    subsystem: "com.swiftappupdatekit",
-    category: "BuildEnvironmentDetector"
-)

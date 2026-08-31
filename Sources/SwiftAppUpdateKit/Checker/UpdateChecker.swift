@@ -116,12 +116,12 @@ public final class UpdateChecker {
         Task {
             do {
                 let outcome = try await self.check()
-                checkerLogger.info(
-                    "Update check outcome: \(String(describing: outcome), privacy: .public)"
+                Logger.updateChecker.info(
+                    "[\(Self.self)] \(#function): Update check outcome: \(String(describing: outcome), privacy: .public)"
                 )
             } catch {
-                checkerLogger.error(
-                    "Update check failed: \(String(describing: error), privacy: .public)"
+                Logger.updateChecker.error(
+                    "[\(Self.self)] \(#function): Update check failed: \(String(describing: error), privacy: .public)"
                 )
             }
         }
@@ -180,7 +180,9 @@ public final class UpdateChecker {
             self.presentationState != .presenting
         else { return nil }
         self.presentationState = .presenting
-        checkerLogger.info("Update prompt claimed for \(description.storeVersionString, privacy: .public)")
+        Logger.updateChecker.info(
+            "[\(Self.self)] \(#function): Update prompt claimed for \(description.storeVersionString, privacy: .public)"
+        )
         return description
     }
 
@@ -190,7 +192,7 @@ public final class UpdateChecker {
     /// or to nothing-pending if no update remains.
     public func releaseUpdatePrompt() {
         guard self.presentationState == .presenting else { return }
-        checkerLogger.info("Update prompt withdrawn without resolution")
+        Logger.updateChecker.info("[\(Self.self)] \(#function): Update prompt withdrawn without resolution")
         self.presentationState = self.isUpdatePromptReady ? .awaitingPermission : .noPendingUpdate
     }
 
@@ -208,15 +210,17 @@ public final class UpdateChecker {
         if await self.urlOpener.open(description.metadata.productPageURL) {
             return
         }
-        checkerLogger.error(
-            "Failed to open the App Store for version \(description.storeVersionString, privacy: .public)"
+        Logger.updateChecker.error(
+            "[\(Self.self)] \(#function): Failed to open the App Store for version \(description.storeVersionString, privacy: .public)"
         )
     }
 
     /// Snoozes the given update for the configured snooze interval, then clears the pending update.
     public func snooze(_ description: UpdateDescription) async {
         let expiry = self.currentDate().addingTimeInterval(self.configuration.snoozeInterval)
-        checkerLogger.info("Version \(description.storeVersionString, privacy: .public) snoozed until \(String(describing: expiry), privacy: .public)")
+        Logger.updateChecker.info(
+            "[\(Self.self)] \(#function): Version \(description.storeVersionString, privacy: .public) snoozed until \(String(describing: expiry), privacy: .public)"
+        )
         await self.promptStateStore.recordSnooze(for: description.storeVersionString, expiry: expiry)
         self.isUpdatePromptReady = false
         self.presentationState = .resolved
@@ -224,7 +228,9 @@ public final class UpdateChecker {
 
     /// Permanently skips the given update version, then clears the pending update.
     public func skip(_ description: UpdateDescription) async {
-        checkerLogger.info("Version \(description.storeVersionString, privacy: .public) skipped permanently")
+        Logger.updateChecker.info(
+            "[\(Self.self)] \(#function): Version \(description.storeVersionString, privacy: .public) skipped permanently"
+        )
         await self.promptStateStore.recordSkip(for: description.storeVersionString)
         self.isUpdatePromptReady = false
         self.presentationState = .resolved
@@ -261,7 +267,9 @@ public final class UpdateChecker {
             // the sheet observes availableUpdate and handles the withdrawal itself.
             if self.presentationState != .presenting {
                 self.presentationState = .awaitingPermission
-                checkerLogger.info("Update \(description.storeVersionString, privacy: .public) ready — awaiting presentation permission")
+                Logger.updateChecker.info(
+                    "[\(Self.self)] \(#function): Update \(description.storeVersionString, privacy: .public) ready — awaiting presentation permission"
+                )
             }
         case .suppressed(.skipped(description: let description)):
             self.availableUpdate = description
@@ -286,10 +294,3 @@ public final class UpdateChecker {
         }
     }
 }
-
-// MARK: - Logger
-
-private let checkerLogger = Logger(
-    subsystem: "com.swiftappupdatekit",
-    category: "UpdateChecker"
-)
