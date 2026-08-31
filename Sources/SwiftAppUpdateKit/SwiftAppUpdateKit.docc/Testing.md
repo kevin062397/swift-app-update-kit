@@ -117,3 +117,21 @@ Task {
 ```
 
 The pipeline still applies every other gate — compatibility, release age, policy, skip, and snooze — so `.upToDate` or `.suppressed` outcomes are expected unless your installed version is genuinely behind the store version.
+
+## Reading Console Logs
+
+Every gate logs its entry, pass, and suppression or failure to `OSLog`. Network and StoreKit errors are logged at the `error` level; everything else at `info`. Filter by subsystem in Console.app or `log stream` to see the full decision trace without attaching a debugger:
+
+```
+Subsystem: com.swiftappupdatekit
+```
+
+Three categories are available for finer filtering:
+
+| Category                   | Covers                                         |
+| -------------------------- | ---------------------------------------------- |
+| `UpdateCheckPipeline`      | Every gate in the update check run             |
+| `UpdateChecker`            | Check outcomes, prompt lifecycle, user actions |
+| `BuildEnvironmentDetector` | Build environment detection path               |
+
+This is particularly useful in TestFlight builds, where a debugger cannot be attached.

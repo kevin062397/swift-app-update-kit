@@ -124,6 +124,8 @@ The production gate always returns `.suppressed(.nonProductionBuild)` in the Sim
 
 To preview the update prompt layout, instantiate `UpdatePromptView` directly with any data you construct — no checker or network call needed. The full DocC article covers both view testing and on-device pipeline testing.
 
+Every gate also emits structured `OSLog` entries under the `com.swiftappupdatekit` subsystem, so you can trace the full gate sequence in Console.app without attaching a debugger — useful for TestFlight builds.
+
 A live endpoint suite exercises the real iTunes Lookup API and is excluded from the default test run to keep it offline and deterministic. To run it, set `SWIFT_APP_UPDATE_KIT_LIVE_TESTS=1` in the environment before running `xcodebuild test`, or in the scheme's Run arguments in Xcode.
 
 ## Documentation
