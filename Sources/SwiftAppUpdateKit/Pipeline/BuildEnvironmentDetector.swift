@@ -28,13 +28,18 @@ struct BuildEnvironmentDetectionStrategy {
 
     func isProductionBuild() async -> Bool {
         if self.isRunningInSimulator {
+            Logger.buildEnvironmentDetector.info("[\(Self.self)] \(#function): Running in Simulator")
             return false
         }
         if self.isDebuggerAttached {
+            Logger.buildEnvironmentDetector.info("[\(Self.self)] \(#function): Debugger attached")
             return false
         }
         do {
             let environment = try await self.fetchAppTransactionEnvironment()
+            Logger.buildEnvironmentDetector.info(
+                "[\(Self.self)] \(#function): App transaction environment: \(String(describing: environment), privacy: .public)"
+            )
             return environment == .production
         } catch {
             // Fail toward production: disabling checking for all users on a lookup
