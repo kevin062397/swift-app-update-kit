@@ -75,7 +75,9 @@ struct UpdateCheckerModifierTests {
         )
     }
 
-    private func makeChecker(storeVersionString: String = UpdateCheckerModifierTests.storeVersionString) -> UpdateChecker {
+    private func makeChecker(
+        storeVersionString: String = UpdateCheckerModifierTests.storeVersionString
+    ) -> UpdateChecker {
         let installedVersionString = Self.installedVersionString
         return UpdateChecker(
             configuration: UpdateCheckConfiguration(policy: Self.allOptionalPolicy),

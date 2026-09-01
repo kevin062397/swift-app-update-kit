@@ -56,6 +56,7 @@ struct AppStoreStorefrontResolver: StorefrontResolver {
         return await StorefrontResolutionStrategy(
             fetchStorefrontThreeLetterCode: { await Storefront.current?.countryCode },
             fetchDeviceRegionCode: { Locale.current.region?.identifier }
-        ).resolve()
+        )
+        .resolve()
     }
 }

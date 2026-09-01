@@ -52,7 +52,8 @@ struct AppStoreUpdateSourceTests {
                     "fileSizeBytes": "44039168"
                 }]
             }
-            """.utf8
+            """
+            .utf8
         )
     }
 

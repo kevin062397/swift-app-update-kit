@@ -43,11 +43,35 @@ public struct UpdatePromptStrings: Sendable {
     /// strings.deferButton = "Remind Me Later"
     /// ```
     public init() {
-        self.updateAvailableTitle = String(localized: "updatePrompt.title.updateAvailable", defaultValue: "Update Available", bundle: .module)
-        self.updateRequiredTitle = String(localized: "updatePrompt.title.updateRequired", defaultValue: "Update Required", bundle: .module)
-        self.releaseNotesHeading = String(localized: "updatePrompt.releaseNotes.heading", defaultValue: "What’s New", bundle: .module)
-        self.updateButton = String(localized: "updatePrompt.action.update", defaultValue: "Update Now", bundle: .module)
-        self.deferButton = String(localized: "updatePrompt.action.defer", defaultValue: "Update Later", bundle: .module)
-        self.skipButton = String(localized: "updatePrompt.action.skip", defaultValue: "Skip This Version", bundle: .module)
+        self.updateAvailableTitle = String(
+            localized: "updatePrompt.title.updateAvailable",
+            defaultValue: "Update Available",
+            bundle: .module
+        )
+        self.updateRequiredTitle = String(
+            localized: "updatePrompt.title.updateRequired",
+            defaultValue: "Update Required",
+            bundle: .module
+        )
+        self.releaseNotesHeading = String(
+            localized: "updatePrompt.releaseNotes.heading",
+            defaultValue: "What’s New",
+            bundle: .module
+        )
+        self.updateButton = String(
+            localized: "updatePrompt.action.update",
+            defaultValue: "Update Now",
+            bundle: .module
+        )
+        self.deferButton = String(
+            localized: "updatePrompt.action.defer",
+            defaultValue: "Update Later",
+            bundle: .module
+        )
+        self.skipButton = String(
+            localized: "updatePrompt.action.skip",
+            defaultValue: "Skip This Version",
+            bundle: .module
+        )
     }
 }

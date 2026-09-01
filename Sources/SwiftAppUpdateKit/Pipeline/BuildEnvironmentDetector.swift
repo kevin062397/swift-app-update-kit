@@ -70,7 +70,8 @@ struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
                     return transaction.environment
                 }
             }
-        ).isProductionBuild()
+        )
+        .isProductionBuild()
     }
 
     private static var isRunningInSimulator: Bool {
@@ -86,7 +87,9 @@ struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
         var size = MemoryLayout<kinfo_proc>.stride
         let returnCode = sysctl(&mib, UInt32(mib.count), &kinfo, &size, nil, 0)
-        guard returnCode == 0 else { return false }
+        guard returnCode == 0 else {
+            return false
+        }
         return (kinfo.kp_proc.p_flag & P_TRACED) != 0
     }
 }

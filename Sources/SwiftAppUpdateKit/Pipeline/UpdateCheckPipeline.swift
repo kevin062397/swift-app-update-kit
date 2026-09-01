@@ -19,7 +19,9 @@ struct BundleMetadata {
         guard
             let identifier = bundle.bundleIdentifier,
             let versionString = bundle.infoDictionary?["CFBundleShortVersionString"] as? String
-        else { return nil }
+        else {
+            return nil
+        }
         return BundleMetadata(
             bundleIdentifier: identifier,
             installedVersionString: versionString,
