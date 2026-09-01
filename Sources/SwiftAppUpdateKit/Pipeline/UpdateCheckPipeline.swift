@@ -39,13 +39,19 @@ struct BundleMetadata {
 public struct UpdateCheckConfiguration: Sendable {
     /// The policy that maps each version classification to a requirement.
     public let policy: UpdatePolicy
-    /// The minimum elapsed time between automatic checks. Defaults to one day (86 400 s).
+    /// The minimum elapsed time between automatic checks. Defaults to one day (86400 s).
     public let throttleInterval: TimeInterval
-    /// The duration for which a snoozed version is suppressed. Defaults to one day (86 400 s).
+    /// The duration for which a snoozed version is suppressed. Defaults to one day (86400 s).
     public let snoozeInterval: TimeInterval
-    /// The minimum age a store release must reach before it is offered. Defaults to one day (86 400 s).
+    /// The minimum age a store release must reach before it is offered. Defaults to one day (86400 s).
     ///
-    /// This gate exists to allow time for a phased rollout to propagate before the prompt reaches users.
+    /// The iTunes Lookup API and the App Store delivery infrastructure are independent systems.
+    /// A new release can become queryable via the API before its binary has fully propagated to
+    /// the CDN, creating a window during which the update prompt would direct users to a version
+    /// not yet downloadable.
+    ///
+    /// - Important:
+    /// A small value increases the risk of directing users to a version not yet available for download.
     public let minimumReleaseAge: TimeInterval
     /// When `true`, the production-build gate is skipped and checks run in the simulator,
     /// under a debugger, and in TestFlight builds. Defaults to `false`.

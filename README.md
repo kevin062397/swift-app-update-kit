@@ -116,7 +116,7 @@ Use `checkAtLaunch()` and `claimUpdatePrompt()` when you need to slot the update
 | `snoozeInterval`    | Duration a deferred version is suppressed           |
 | `minimumReleaseAge` | Minimum age of a store release before it is offered |
 
-The release age gate allows time for a phased rollout to propagate before the prompt reaches users.
+The release age gate guards against the iTunes Lookup API leading the App Store CDN: metadata for a new release can become queryable before the binary has fully propagated, creating a window during which the prompt would direct users to a version not yet downloadable.
 
 ## Testing
 
