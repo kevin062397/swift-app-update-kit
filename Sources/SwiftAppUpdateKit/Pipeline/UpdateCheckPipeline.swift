@@ -102,13 +102,13 @@ struct UpdateCheckPipeline {
                 let nextEligibleDate = lastCheck.addingTimeInterval(self.configuration.throttleInterval)
                 if now < nextEligibleDate {
                     Logger.updateCheckPipeline.info(
-                        "[\(Self.self)] \(#function): Gate 1 suppressed: throttled — next check at \(String(describing: nextEligibleDate), privacy: .public)"
+                        "[\(Self.self)] \(#function): Gate 1 suppressed: Throttled — next check at \(String(describing: nextEligibleDate), privacy: .public)"
                     )
                     return .suppressed(.throttled(nextEligibleDate: nextEligibleDate))
                 }
             }
         }
-        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 1 passed: throttle window cleared")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 1 passed: Throttle window cleared")
 
         // Gate 2: Production build.
         // Placed after the throttle gate so that the StoreKit lookup is skipped on throttled launches.
@@ -116,16 +116,16 @@ struct UpdateCheckPipeline {
         if !self.shouldBypassProductionBuildCheck,
             await !self.buildEnvironmentDetector.isProductionBuild()
         {
-            Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2 suppressed: non-production build")
+            Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2 suppressed: Non-production build")
             return .suppressed(.nonProductionBuild)
         }
-        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2 passed: production build confirmed")
+        Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2 passed: Production build confirmed")
 
         // Gate 3: Read bundle identifier and installed version.
         Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 3: Reading bundle metadata from Info.plist")
         guard let bundleMetadata = self.bundleMetadataProvider() else {
             Logger.updateCheckPipeline.error(
-                "[\(Self.self)] \(#function): Gate 3 failed: bundle identifier or version string missing from Info.plist"
+                "[\(Self.self)] \(#function): Gate 3 failed: Bundle identifier or version string missing from Info.plist"
             )
             throw .missingBundleMetadata
         }
@@ -151,7 +151,7 @@ struct UpdateCheckPipeline {
             throw error.asUpdateCheckFailure()
         }
         Logger.updateCheckPipeline.info(
-            "[\(Self.self)] \(#function): Gate 4 passed: store version \(storeMetadata.versionString, privacy: .public)"
+            "[\(Self.self)] \(#function): Gate 4 passed: Store version \(storeMetadata.versionString, privacy: .public)"
         )
 
         // Gate 5: Record successful check time.
@@ -164,7 +164,7 @@ struct UpdateCheckPipeline {
         let runningOS = self.currentOSVersion()
         if storeMetadata.minimumOperatingSystemVersion > runningOS {
             Logger.updateCheckPipeline.info(
-                "[\(Self.self)] \(#function): Gate 6 suppressed: store version requires iOS \(String(describing: storeMetadata.minimumOperatingSystemVersion), privacy: .public) — device runs \(String(describing: runningOS), privacy: .public)"
+                "[\(Self.self)] \(#function): Gate 6 suppressed: Store version requires iOS \(String(describing: storeMetadata.minimumOperatingSystemVersion), privacy: .public) — device runs \(String(describing: runningOS), privacy: .public)"
             )
             return .suppressed(
                 .incompatibleWithDeviceOS(
@@ -182,7 +182,7 @@ struct UpdateCheckPipeline {
         let eligibleDate = storeMetadata.releaseDate.addingTimeInterval(self.configuration.minimumReleaseAge)
         if now < eligibleDate {
             Logger.updateCheckPipeline.info(
-                "[\(Self.self)] \(#function): Gate 7 suppressed: release too recent — eligible at \(String(describing: eligibleDate), privacy: .public)"
+                "[\(Self.self)] \(#function): Gate 7 suppressed: Release too recent — eligible at \(String(describing: eligibleDate), privacy: .public)"
             )
             return .suppressed(
                 .releaseTooRecent(
@@ -192,7 +192,7 @@ struct UpdateCheckPipeline {
             )
         }
         Logger.updateCheckPipeline.info(
-            "[\(Self.self)] \(#function): Gate 7 passed: version released \(String(describing: storeMetadata.releaseDate), privacy: .public)"
+            "[\(Self.self)] \(#function): Gate 7 passed: Version released \(String(describing: storeMetadata.releaseDate), privacy: .public)"
         )
 
         // Gate 8: Compare versions.
@@ -201,13 +201,13 @@ struct UpdateCheckPipeline {
         )
         if bundleMetadata.installedVersion == storeMetadata.version {
             Logger.updateCheckPipeline.info(
-                "[\(Self.self)] \(#function): Gate 8 exited: up to date (\(bundleMetadata.installedVersionString, privacy: .public))"
+                "[\(Self.self)] \(#function): Gate 8 exited: Up to date (\(bundleMetadata.installedVersionString, privacy: .public))"
             )
             return .upToDate
         }
         if bundleMetadata.installedVersion > storeMetadata.version {
             Logger.updateCheckPipeline.info(
-                "[\(Self.self)] \(#function): Gate 8 exited: installed (\(bundleMetadata.installedVersionString, privacy: .public)) is ahead of store (\(storeMetadata.versionString, privacy: .public))"
+                "[\(Self.self)] \(#function): Gate 8 exited: Installed (\(bundleMetadata.installedVersionString, privacy: .public)) is ahead of store (\(storeMetadata.versionString, privacy: .public))"
             )
             return .installedIsNewer
         }
@@ -215,7 +215,7 @@ struct UpdateCheckPipeline {
         // Gate 8 cleared: the store has a newer version. Build its full description before the
         // suppression gates so that every downstream outcome can carry it.
         Logger.updateCheckPipeline.info(
-            "[\(Self.self)] \(#function): Gate 8 passed: store \(storeMetadata.versionString, privacy: .public) is newer"
+            "[\(Self.self)] \(#function): Gate 8 passed: Store \(storeMetadata.versionString, privacy: .public) is newer"
         )
         let classification = AppVersion.classify(bundleMetadata.installedVersion, storeMetadata.version)!
         let requirement = self.configuration.policy.requirement(for: classification)
