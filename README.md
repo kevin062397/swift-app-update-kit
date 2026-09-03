@@ -102,6 +102,23 @@ Revoking `isPermitted` while the update prompt is visible withdraws it without r
 
 Use `checkAtLaunch()` and `claimUpdatePrompt()` when you need to slot the update prompt into a custom presentation hierarchy, or to pass a custom `UpdatePromptStrings` to override any user-visible label. See [Getting Started](Sources/SwiftAppUpdateKit/SwiftAppUpdateKit.docc/GettingStarted.md) for a complete walkthrough of both.
 
+## Localization
+
+The built-in update prompt currently supports:
+
+- `de` (German)
+- `en` (English)
+- `es` (Spanish)
+- `fr` (French)
+- `it` (Italian)
+- `ja` (Japanese)
+- `ko` (Korean)
+- `ru` (Russian)
+- `zh-Hans` (Simplified Chinese)
+- `zh-Hant` (Traditional Chinese)
+
+Apps can override any user-visible prompt string with `UpdatePromptStrings`.
+
 ## Available Update
 
 `availableUpdate` is set when a check finds a newer, compatible, and sufficiently recent store version — including versions the policy classifies as silent and versions the user has snoozed or skipped. It is cleared when a check confirms the installed version is current. Throttled and failed checks leave it unchanged. See [Getting Started](Sources/SwiftAppUpdateKit/SwiftAppUpdateKit.docc/GettingStarted.md) for a usage example.

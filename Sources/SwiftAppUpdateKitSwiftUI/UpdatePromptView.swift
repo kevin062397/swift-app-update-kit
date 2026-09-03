@@ -78,7 +78,7 @@ public struct UpdatePromptView: View {
                                     String(
                                         localized: "updatePrompt.accessibility.versionTransition",
                                         defaultValue:
-                                            "Installed version \(self.description.installedVersionString), new version \(self.description.storeVersionString)",
+                                            "The installed version is \(self.description.installedVersionString). The new version is \(self.description.storeVersionString).",
                                         bundle: .module
                                     )
                                 )
