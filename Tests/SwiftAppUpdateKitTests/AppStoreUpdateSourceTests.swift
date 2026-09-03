@@ -62,6 +62,23 @@ struct AppStoreUpdateSourceTests {
         return URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
     }
 
+    // MARK: - Response Body Preview
+
+    @Test func responseBodyPreviewReportsEmptyResponse() {
+        let preview = AppStoreUpdateSource.responseBodyPreview(from: Data())
+
+        #expect(preview == "<empty response>")
+    }
+
+    @Test func responseBodyPreviewIsCapped() {
+        let data = Data(String(repeating: "a", count: 2050).utf8)
+
+        let preview = AppStoreUpdateSource.responseBodyPreview(from: data)
+
+        #expect(preview.hasPrefix(String(repeating: "a", count: 2048)))
+        #expect(preview.contains("truncated to 2048 bytes"))
+    }
+
     // MARK: - URL Construction
 
     @Test func lookupURLAlwaysIncludesBundleIdentifier() async {

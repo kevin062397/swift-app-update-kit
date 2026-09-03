@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 // MARK: - Lookup Request Error
 
@@ -58,6 +59,7 @@ protocol UpdateSource: Sendable {
 struct AppStoreUpdateSource: UpdateSource {
     private static let requestTimeoutInterval: TimeInterval = 15
     private static let defaultRetryDelay: Duration = .seconds(2)
+    private static let responseBodyPreviewLimit = 2048
 
     private let retryDelay: Duration
     private let performDataRequest: @Sendable (URLRequest) async throws -> (Data, URLResponse)
@@ -96,6 +98,9 @@ struct AppStoreUpdateSource: UpdateSource {
             )
         } catch {
             guard error.isRetryable else { throw error }
+            Logger.appStoreUpdateSource.info(
+                "[\(Self.self)] \(#function): Retrying lookup after retryable failure: \(String(describing: error), privacy: .public)"
+            )
         }
 
         try? await Task.sleep(for: self.retryDelay)
@@ -109,17 +114,29 @@ struct AppStoreUpdateSource: UpdateSource {
         request: URLRequest,
         expectedBundleIdentifier: String
     ) async throws(LookupRequestError) -> AppStoreMetadata {
+        Logger.appStoreUpdateSource.debug(
+            "[\(Self.self)] \(#function): Sending lookup request: url=\(request.url?.absoluteString ?? "<missing>", privacy: .private), timeout=\(request.timeoutInterval, privacy: .public), cachePolicy=\(String(describing: request.cachePolicy), privacy: .public)"
+        )
+
         let data: Data
         let response: URLResponse
         do {
             (data, response) = try await self.performDataRequest(request)
         } catch {
+            Logger.appStoreUpdateSource.error(
+                "[\(Self.self)] \(#function): Lookup request failed before receiving a response: \(String(describing: error), privacy: .public)"
+            )
             throw .networkUnreachable
         }
+
+        Self.logResponseMetadata(response, byteCount: data.count)
 
         if let httpResponse = response as? HTTPURLResponse,
             !(200..<300).contains(httpResponse.statusCode)
         {
+            Logger.appStoreUpdateSource.error(
+                "[\(Self.self)] \(#function): Lookup request received server error: status=\(httpResponse.statusCode, privacy: .public)"
+            )
             throw .serverError(statusCode: httpResponse.statusCode)
         }
 
@@ -129,6 +146,7 @@ struct AppStoreUpdateSource: UpdateSource {
                 expectedBundleIdentifier: expectedBundleIdentifier
             )
         } catch let decodeError as LookupDecodeError {
+            Self.logDecodeFailure(decodeError, data: data)
             switch decodeError {
             case .absentFromStorefront:
                 throw .absentFromStorefront
@@ -138,8 +156,40 @@ struct AppStoreUpdateSource: UpdateSource {
                 throw .malformedResponse
             }
         } catch {
+            Self.logDecodeFailure(.malformedResponse, data: data)
             throw .malformedResponse
         }
+    }
+
+    private static func logResponseMetadata(_ response: URLResponse, byteCount: Int) {
+        let finalURL = response.url?.absoluteString ?? "<missing>"
+        if let httpResponse = response as? HTTPURLResponse {
+            Logger.appStoreUpdateSource.debug(
+                "[\(Self.self)] \(#function): Received lookup response: status=\(httpResponse.statusCode, privacy: .public), bytes=\(byteCount, privacy: .public), url=\(finalURL, privacy: .private)"
+            )
+        } else {
+            Logger.appStoreUpdateSource.debug(
+                "[\(Self.self)] \(#function): Received non-HTTP lookup response: bytes=\(byteCount, privacy: .public), url=\(finalURL, privacy: .private)"
+            )
+        }
+    }
+
+    private static func logDecodeFailure(_ error: LookupDecodeError, data: Data) {
+        Logger.appStoreUpdateSource.error(
+            "[\(Self.self)] \(#function): Lookup response decode failed: error=\(String(describing: error), privacy: .public), bodyPreview=\(Self.responseBodyPreview(from: data), privacy: .private)"
+        )
+    }
+
+    static func responseBodyPreview(from data: Data) -> String {
+        guard !data.isEmpty else {
+            return "<empty response>"
+        }
+        let prefix = data.prefix(Self.responseBodyPreviewLimit)
+        let preview = String(decoding: prefix, as: UTF8.self)
+        if data.count > Self.responseBodyPreviewLimit {
+            return "\(preview)… <truncated to \(Self.responseBodyPreviewLimit) bytes>"
+        }
+        return preview
     }
 
     private static func buildLookupURL(

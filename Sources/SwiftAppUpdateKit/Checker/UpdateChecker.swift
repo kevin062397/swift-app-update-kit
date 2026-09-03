@@ -108,17 +108,14 @@ public final class UpdateChecker {
 
     // MARK: - Check Entry Points
 
-    /// Runs a check without exposing failures to the caller, for use at launch.
+    /// Runs a launch check without exposing failures to the caller.
     ///
-    /// Outcomes and failures are both logged. A failure leaves `isUpdatePromptReady`, `availableUpdate`,
-    /// and `lastOutcome` unchanged, so the previous values survive a transient error.
+    /// A failure leaves `isUpdatePromptReady`, `availableUpdate`, and `lastOutcome` unchanged,
+    /// so observable checker state survives a transient error.
     public func checkAtLaunch() {
         Task {
             do {
-                let outcome = try await self.check()
-                Logger.updateChecker.info(
-                    "[\(Self.self)] \(#function): Update check outcome: \(String(describing: outcome), privacy: .public)"
-                )
+                try await self.check()
             } catch {
                 Logger.updateChecker.error(
                     "[\(Self.self)] \(#function): Update check failed: \(String(describing: error), privacy: .public)"
@@ -140,7 +137,11 @@ public final class UpdateChecker {
         shouldBypassThrottle: Bool = false
     ) async throws(UpdateCheckFailure) -> UpdateCheckOutcome {
         if let existing = self.inFlightTask {
-            return try await Self.extractOutcome(from: existing)
+            let outcome = try await Self.extractOutcome(from: existing)
+            Logger.updateChecker.debug(
+                "[\(Self.self)] \(#function): Update check outcome: \(String(describing: outcome), privacy: .public)"
+            )
+            return outcome
         }
 
         let pipeline = UpdateCheckPipeline(
@@ -160,10 +161,15 @@ public final class UpdateChecker {
             try await pipeline.run()
         }
         self.inFlightTask = task
-        defer { self.inFlightTask = nil }
+        defer {
+            self.inFlightTask = nil
+        }
 
         let outcome = try await Self.extractOutcome(from: task)
         self.apply(outcome: outcome)
+        Logger.updateChecker.debug(
+            "[\(Self.self)] \(#function): Update check outcome: \(String(describing: outcome), privacy: .public)"
+        )
         return outcome
     }
 

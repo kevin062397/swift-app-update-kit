@@ -11,6 +11,7 @@ import OSLog
 extension Logger {
     private static let subsystem = "com.swiftappupdatekit"
 
+    static let appStoreUpdateSource = Logger(subsystem: Self.subsystem, category: "AppStoreUpdateSource")
     static let buildEnvironmentDetector = Logger(subsystem: Self.subsystem, category: "BuildEnvironmentDetector")
     static let updateChecker = Logger(subsystem: Self.subsystem, category: "UpdateChecker")
     static let updateCheckPipeline = Logger(subsystem: Self.subsystem, category: "UpdateCheckPipeline")
