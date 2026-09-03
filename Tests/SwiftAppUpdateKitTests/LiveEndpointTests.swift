@@ -19,7 +19,7 @@ import Testing
 private let liveTestsEnabled = ProcessInfo.processInfo.environment["SWIFT_APP_UPDATE_KIT_LIVE_TESTS"] == "1"
 
 // The WWDC app, published and maintained by Apple. Chosen for long-term stability.
-private let wwdcBundleIdentifier = "developer.apple.wwdc-Release"
+private let appBundleIdentifier = "developer.apple.wwdc-Release"
 
 @Suite(.enabled(if: liveTestsEnabled))
 struct LiveEndpointTests {
@@ -28,8 +28,8 @@ struct LiveEndpointTests {
     // MARK: - US Storefront
 
     @Test func usStorefrontResponseCarriesAllContractFields() async throws {
-        let metadata = try await source.fetchMetadata(
-            bundleIdentifier: wwdcBundleIdentifier,
+        let metadata = try await self.source.fetchMetadata(
+            bundleIdentifier: appBundleIdentifier,
             storefrontCountryCode: "US"
         )
         #expect(metadata.trackID > 0)
@@ -43,8 +43,8 @@ struct LiveEndpointTests {
     // MARK: - Non-US Storefront
 
     @Test func nonUsStorefrontLookupReturnsARecord() async throws {
-        let metadata = try await source.fetchMetadata(
-            bundleIdentifier: wwdcBundleIdentifier,
+        let metadata = try await self.source.fetchMetadata(
+            bundleIdentifier: appBundleIdentifier,
             storefrontCountryCode: "GB"
         )
         #expect(!metadata.versionString.isEmpty)
