@@ -315,6 +315,32 @@ struct UpdateCheckPipelineTests {
         #expect(checkDate == self.referenceDate)
     }
 
+    @Test func successfulRequestPrunesStalePromptState() async throws {
+        let store = InMemoryPromptStateStore()
+        let expiry = self.referenceDate.addingTimeInterval(self.oneDayInSeconds)
+        await store.recordSnooze(for: "1.4.0", expiry: expiry)
+        await store.recordSkip(for: "1.4.0")
+        let metadata = self.makeStoreMetadata(versionString: Self.installedVersionString)
+        let source = MockUpdateSource(result: .success(metadata))
+        let pipeline = self.makePipeline(
+            promptStateStore: store,
+            updateSource: source,
+            currentDate: self.referenceDate
+        )
+
+        let outcome = try await pipeline.run()
+
+        let snoozeResult = await store.snoozeExpiry(
+            for: "1.4.0",
+            currentDate: self.referenceDate,
+            snoozeInterval: self.oneDayInSeconds
+        )
+        let skipResult = await store.isVersionSkipped("1.4.0")
+        #expect(outcome == .upToDate)
+        #expect(snoozeResult == nil)
+        #expect(skipResult == false)
+    }
+
     // MARK: - Gate 6: OS Compatibility
 
     @Test func incompatibleStoreVersionIsSuppressed() async throws {

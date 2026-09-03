@@ -160,10 +160,12 @@ struct UpdateCheckPipeline {
             "[\(Self.self)] \(#function): Gate 4 passed: Store version \(storeMetadata.versionString, privacy: .public)"
         )
 
-        // Gate 5: Record successful check time.
+        // Gate 5: Record successful check time and prune stale suppression state.
         // Must run immediately after a successful fetch and never after a failure, so that a single
-        // offline launch does not silence checking for a full throttle window.
+        // offline launch does not silence checking for a full throttle window. Pruning happens here
+        // so stale version-keyed entries are bounded even when later gates return early.
         await self.promptStateStore.recordLastCheckDate(now)
+        await self.promptStateStore.pruneEntries(olderThan: storeMetadata.version)
 
         // Gate 6: Minimum OS version at most the running OS.
         Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 6: Checking OS compatibility")
@@ -282,7 +284,6 @@ struct UpdateCheckPipeline {
         // Gates 10 and 11 do not apply to required updates: the skip/snooze state is what
         // makes the requirement meaningful.
 
-        await self.promptStateStore.pruneEntries(olderThan: storeMetadata.version)
         Logger.updateCheckPipeline.info(
             "[\(Self.self)] \(#function): Update prompt ready: \(bundleMetadata.installedVersionString, privacy: .public) → \(storeMetadata.versionString, privacy: .public) (\(String(describing: requirement), privacy: .public))"
         )
