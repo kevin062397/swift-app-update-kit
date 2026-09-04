@@ -27,16 +27,23 @@ private actor MockUpdateSource: UpdateSource {
 
     private let mockResult: MockResult
     private(set) var callCount = 0
+    private(set) var capturedBundleIdentifier: String?
+    private(set) var capturedStorefrontCountryCode: String?
+    private(set) var capturedLanguageCode: String?
 
     init(result: MockResult) {
         self.mockResult = result
     }
 
     func fetchMetadata(
-        bundleIdentifier _: String,
-        storefrontCountryCode _: String?
+        bundleIdentifier: String,
+        storefrontCountryCode: String?,
+        languageCode: String?
     ) async throws(LookupRequestError) -> AppStoreMetadata {
         self.callCount += 1
+        self.capturedBundleIdentifier = bundleIdentifier
+        self.capturedStorefrontCountryCode = storefrontCountryCode
+        self.capturedLanguageCode = languageCode
         switch self.mockResult {
         case .success(let metadata):
             return metadata
@@ -49,6 +56,18 @@ private actor MockUpdateSource: UpdateSource {
 private struct MockStorefrontResolver: StorefrontResolver {
     func resolveStorefrontCountryCode() async -> String? {
         return "US"
+    }
+}
+
+private struct MockAppStoreLanguageResolver: AppStoreLanguageResolver {
+    let languageCode: String?
+
+    init(languageCode: String? = "en_us") {
+        self.languageCode = languageCode
+    }
+
+    func resolveLanguageCode() -> String? {
+        return self.languageCode
     }
 }
 
@@ -123,6 +142,7 @@ struct UpdateCheckPipelineTests {
             buildEnvironmentDetector: MockBuildEnvironmentDetector(isProduction: isProduction),
             updateSource: updateSource,
             storefrontResolver: MockStorefrontResolver(),
+            appStoreLanguageResolver: MockAppStoreLanguageResolver(),
             currentDate: { currentDate },
             currentOSVersion: { AppVersion(currentOSVersionString) },
             bundleMetadataProvider: { resolvedBundleMetadata },
@@ -270,6 +290,7 @@ struct UpdateCheckPipelineTests {
             buildEnvironmentDetector: MockBuildEnvironmentDetector(isProduction: true),
             updateSource: source,
             storefrontResolver: MockStorefrontResolver(),
+            appStoreLanguageResolver: MockAppStoreLanguageResolver(),
             currentDate: { self.referenceDate },
             currentOSVersion: { AppVersion("17.0") },
             bundleMetadataProvider: { nil },
@@ -313,6 +334,22 @@ struct UpdateCheckPipelineTests {
 
         let checkDate = await store.lastCheckDate(currentDate: self.referenceDate)
         #expect(checkDate == self.referenceDate)
+    }
+
+    @Test func successfulRequestPassesStorefrontAndLanguageToUpdateSource() async throws {
+        let store = InMemoryPromptStateStore()
+        let source = MockUpdateSource(result: .success(self.makeStoreMetadata()))
+        let pipeline = self.makePipeline(
+            promptStateStore: store,
+            updateSource: source,
+            currentDate: self.referenceDate
+        )
+
+        _ = try await pipeline.run()
+
+        #expect(await source.capturedBundleIdentifier == "com.example.app")
+        #expect(await source.capturedStorefrontCountryCode == "US")
+        #expect(await source.capturedLanguageCode == "en_us")
     }
 
     @Test func successfulRequestPrunesStalePromptState() async throws {

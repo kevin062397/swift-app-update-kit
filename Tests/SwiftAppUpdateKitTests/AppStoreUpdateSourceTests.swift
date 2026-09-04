@@ -86,7 +86,11 @@ struct AppStoreUpdateSourceTests {
         let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
             try await session.send(request)
         }
-        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+        _ = try? await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: nil,
+            languageCode: nil
+        )
 
         let requests = await session.capturedRequests
         let items = requests.first.map { self.queryItems(from: $0) } ?? []
@@ -98,7 +102,11 @@ struct AppStoreUpdateSourceTests {
         let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
             try await session.send(request)
         }
-        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+        _ = try? await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: nil,
+            languageCode: nil
+        )
 
         let requests = await session.capturedRequests
         let items = requests.first.map { self.queryItems(from: $0) } ?? []
@@ -110,7 +118,11 @@ struct AppStoreUpdateSourceTests {
         let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
             try await session.send(request)
         }
-        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: "JP")
+        _ = try? await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: "JP",
+            languageCode: nil
+        )
 
         let requests = await session.capturedRequests
         let items = requests.first.map { self.queryItems(from: $0) } ?? []
@@ -118,12 +130,49 @@ struct AppStoreUpdateSourceTests {
         #expect(items.contains(URLQueryItem(name: "country", value: "jp")))
     }
 
+    @Test func lookupURLIncludesLanguageWhenProvided() async {
+        let session = MockSession([.success((Data(), httpResponse(statusCode: 404)))])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        _ = try? await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: nil,
+            languageCode: "ZH_CN"
+        )
+
+        let requests = await session.capturedRequests
+        let items = requests.first.map { self.queryItems(from: $0) } ?? []
+        #expect(items.contains(URLQueryItem(name: "lang", value: "zh_cn")))
+    }
+
+    @Test func lookupURLKeepsStorefrontAndLanguageIndependent() async {
+        let session = MockSession([.success((Data(), httpResponse(statusCode: 404)))])
+        let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
+            try await session.send(request)
+        }
+        _ = try? await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: "CN",
+            languageCode: "en_us"
+        )
+
+        let requests = await session.capturedRequests
+        let items = requests.first.map { self.queryItems(from: $0) } ?? []
+        #expect(items.contains(URLQueryItem(name: "country", value: "cn")))
+        #expect(items.contains(URLQueryItem(name: "lang", value: "en_us")))
+    }
+
     @Test func requestBypassesURLCache() async {
         let session = MockSession([.success((Data(), httpResponse(statusCode: 404)))])
         let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
             try await session.send(request)
         }
-        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+        _ = try? await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: nil,
+            languageCode: nil
+        )
 
         let requests = await session.capturedRequests
         #expect(requests.first?.cachePolicy == .reloadIgnoringLocalAndRemoteCacheData)
@@ -139,7 +188,11 @@ struct AppStoreUpdateSourceTests {
         let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
             try await session.send(request)
         }
-        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+        _ = try? await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: nil,
+            languageCode: nil
+        )
 
         let requestCount = await session.capturedRequests.count
         #expect(requestCount == 2)
@@ -153,7 +206,11 @@ struct AppStoreUpdateSourceTests {
         let source = AppStoreUpdateSource(retryDelay: .seconds(0)) { request in
             try await session.send(request)
         }
-        _ = try? await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+        _ = try? await source.fetchMetadata(
+            bundleIdentifier: "com.example.app",
+            storefrontCountryCode: nil,
+            languageCode: nil
+        )
 
         let requestCount = await session.capturedRequests.count
         #expect(requestCount == 2)
@@ -169,7 +226,11 @@ struct AppStoreUpdateSourceTests {
 
         var thrownError: LookupRequestError?
         do {
-            _ = try await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+            _ = try await source.fetchMetadata(
+                bundleIdentifier: "com.example.app",
+                storefrontCountryCode: nil,
+                languageCode: nil
+            )
         } catch {
             thrownError = error
         }
@@ -190,7 +251,11 @@ struct AppStoreUpdateSourceTests {
 
         var thrownError: LookupRequestError?
         do {
-            _ = try await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+            _ = try await source.fetchMetadata(
+                bundleIdentifier: "com.example.app",
+                storefrontCountryCode: nil,
+                languageCode: nil
+            )
         } catch {
             thrownError = error
         }
@@ -211,7 +276,11 @@ struct AppStoreUpdateSourceTests {
 
         var thrownError: LookupRequestError?
         do {
-            _ = try await source.fetchMetadata(bundleIdentifier: "com.example.app", storefrontCountryCode: nil)
+            _ = try await source.fetchMetadata(
+                bundleIdentifier: "com.example.app",
+                storefrontCountryCode: nil,
+                languageCode: nil
+            )
         } catch {
             thrownError = error
         }
@@ -230,7 +299,8 @@ struct AppStoreUpdateSourceTests {
         }
         let metadata = try await source.fetchMetadata(
             bundleIdentifier: "com.example.app",
-            storefrontCountryCode: nil
+            storefrontCountryCode: nil,
+            languageCode: nil
         )
         #expect(metadata.version == AppVersion("1.5.0"))
         #expect(metadata.trackID == 1_234_567_890)

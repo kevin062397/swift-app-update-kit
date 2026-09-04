@@ -56,6 +56,7 @@ public final class UpdateChecker {
     @ObservationIgnored private let buildEnvironmentDetector: any BuildEnvironmentDetector
     @ObservationIgnored private let updateSource: any UpdateSource
     @ObservationIgnored private let storefrontResolver: any StorefrontResolver
+    @ObservationIgnored private let appStoreLanguageResolver: any AppStoreLanguageResolver
     @ObservationIgnored private let urlOpener: any URLOpener
     @ObservationIgnored private let currentDate: @Sendable () -> Date
     @ObservationIgnored private let currentOSVersion: @Sendable () -> AppVersion
@@ -77,6 +78,7 @@ public final class UpdateChecker {
             buildEnvironmentDetector: AppStoreBuildEnvironmentDetector(),
             updateSource: AppStoreUpdateSource(),
             storefrontResolver: AppStoreStorefrontResolver(),
+            appStoreLanguageResolver: PreferredAppStoreLanguageResolver(),
             urlOpener: SystemURLOpener(),
             currentDate: { Date() },
             currentOSVersion: osVersion,
@@ -90,6 +92,7 @@ public final class UpdateChecker {
         buildEnvironmentDetector: any BuildEnvironmentDetector,
         updateSource: any UpdateSource,
         storefrontResolver: any StorefrontResolver,
+        appStoreLanguageResolver: any AppStoreLanguageResolver,
         urlOpener: any URLOpener,
         currentDate: @escaping @Sendable () -> Date,
         currentOSVersion: @escaping @Sendable () -> AppVersion,
@@ -100,6 +103,7 @@ public final class UpdateChecker {
         self.buildEnvironmentDetector = buildEnvironmentDetector
         self.updateSource = updateSource
         self.storefrontResolver = storefrontResolver
+        self.appStoreLanguageResolver = appStoreLanguageResolver
         self.urlOpener = urlOpener
         self.currentDate = currentDate
         self.currentOSVersion = currentOSVersion
@@ -150,6 +154,7 @@ public final class UpdateChecker {
             buildEnvironmentDetector: self.buildEnvironmentDetector,
             updateSource: self.updateSource,
             storefrontResolver: self.storefrontResolver,
+            appStoreLanguageResolver: self.appStoreLanguageResolver,
             currentDate: self.currentDate,
             currentOSVersion: self.currentOSVersion,
             bundleMetadataProvider: self.bundleMetadataProvider,

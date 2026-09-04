@@ -90,6 +90,7 @@ struct UpdateCheckPipeline {
     let buildEnvironmentDetector: any BuildEnvironmentDetector
     let updateSource: any UpdateSource
     let storefrontResolver: any StorefrontResolver
+    let appStoreLanguageResolver: any AppStoreLanguageResolver
     let currentDate: @Sendable () -> Date
     let currentOSVersion: @Sendable () -> AppVersion
     let bundleMetadataProvider: @Sendable () -> BundleMetadata?
@@ -144,11 +145,13 @@ struct UpdateCheckPipeline {
             "[\(Self.self)] \(#function): Gate 4: Fetching store metadata for \(bundleMetadata.bundleIdentifier, privacy: .public)"
         )
         let storefrontCode = await self.storefrontResolver.resolveStorefrontCountryCode()
+        let languageCode = self.appStoreLanguageResolver.resolveLanguageCode()
         let storeMetadata: AppStoreMetadata
         do throws(LookupRequestError) {
             storeMetadata = try await self.updateSource.fetchMetadata(
                 bundleIdentifier: bundleMetadata.bundleIdentifier,
-                storefrontCountryCode: storefrontCode
+                storefrontCountryCode: storefrontCode,
+                languageCode: languageCode
             )
         } catch {
             Logger.updateCheckPipeline.error(

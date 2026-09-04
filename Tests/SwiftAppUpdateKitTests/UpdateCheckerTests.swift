@@ -34,7 +34,8 @@ private actor CheckerMockUpdateSource: UpdateSource {
 
     func fetchMetadata(
         bundleIdentifier _: String,
-        storefrontCountryCode _: String?
+        storefrontCountryCode _: String?,
+        languageCode _: String?
     ) async throws(LookupRequestError) -> AppStoreMetadata {
         self.callCount += 1
         switch self.mockResult {
@@ -58,7 +59,8 @@ private actor SequencedMockUpdateSource: UpdateSource {
 
     func fetchMetadata(
         bundleIdentifier _: String,
-        storefrontCountryCode _: String?
+        storefrontCountryCode _: String?,
+        languageCode _: String?
     ) async throws(LookupRequestError) -> AppStoreMetadata {
         self.callCount += 1
         let metadata = self.metadataSequence[min(self.callIndex, self.metadataSequence.count - 1)]
@@ -70,6 +72,12 @@ private actor SequencedMockUpdateSource: UpdateSource {
 private struct CheckerMockStorefrontResolver: StorefrontResolver {
     func resolveStorefrontCountryCode() async -> String? {
         return "US"
+    }
+}
+
+private struct CheckerMockAppStoreLanguageResolver: AppStoreLanguageResolver {
+    func resolveLanguageCode() -> String? {
+        return "en_us"
     }
 }
 
@@ -145,6 +153,7 @@ private struct MockURLOpener: URLOpener {
             buildEnvironmentDetector: CheckerMockBuildEnvironmentDetector(isProduction: isProduction),
             updateSource: updateSource,
             storefrontResolver: CheckerMockStorefrontResolver(),
+            appStoreLanguageResolver: CheckerMockAppStoreLanguageResolver(),
             urlOpener: urlOpener,
             currentDate: { self.referenceDate },
             currentOSVersion: { AppVersion("17.0") },
@@ -507,6 +516,7 @@ private struct MockURLOpener: URLOpener {
             buildEnvironmentDetector: CheckerMockBuildEnvironmentDetector(isProduction: true),
             updateSource: source,
             storefrontResolver: CheckerMockStorefrontResolver(),
+            appStoreLanguageResolver: CheckerMockAppStoreLanguageResolver(),
             urlOpener: MockURLOpener(record: URLOpenRecord()),
             currentDate: { self.referenceDate },
             currentOSVersion: { AppVersion("17.0") },
