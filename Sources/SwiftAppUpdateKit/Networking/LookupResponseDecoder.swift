@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 // MARK: - Decode Error
 
@@ -59,25 +60,55 @@ enum LookupResponseDecoder {
         do {
             response = try JSONDecoder().decode(LookupResponse.self, from: data)
         } catch {
+            Logger.lookupResponseDecoder.error(
+                "[\(Self.self)] \(#function): Failed to decode lookup response envelope: \(String(describing: error), privacy: .public)"
+            )
             throw LookupDecodeError.malformedResponse
         }
 
         guard response.resultCount > 0, let record = response.results.first else {
+            Logger.lookupResponseDecoder.info(
+                "[\(Self.self)] \(#function): Lookup response contained no results"
+            )
             throw LookupDecodeError.absentFromStorefront
         }
 
         guard record.bundleIdentifier == expectedBundleIdentifier else {
+            Logger.lookupResponseDecoder.error(
+                "[\(Self.self)] \(#function): Lookup response bundle mismatch: expected=\(expectedBundleIdentifier, privacy: .public), actual=\(record.bundleIdentifier, privacy: .public)"
+            )
             throw LookupDecodeError.identityMismatch
         }
 
         guard let productPageURL = URL(string: record.trackViewURL) else {
+            Logger.lookupResponseDecoder.error(
+                "[\(Self.self)] \(#function): Lookup response contained invalid product URL: \(record.trackViewURL, privacy: .private)"
+            )
             throw LookupDecodeError.malformedResponse
         }
 
         // An unparseable release date is treated as arbitrarily old so the release-age gate passes.
         let releaseDate = ISO8601DateFormatter().date(from: record.currentVersionReleaseDate) ?? .distantPast
+        if releaseDate == .distantPast {
+            Logger.lookupResponseDecoder.warning(
+                "[\(Self.self)] \(#function): Lookup response contained unparseable release date \(record.currentVersionReleaseDate, privacy: .public); treating as distant past"
+            )
+        }
         let artworkURL = record.artworkURL.flatMap { URL(string: $0) }
         let fileSizeInBytes = record.fileSizeInBytes.flatMap { Int($0) }
+        if record.artworkURL != nil, artworkURL == nil {
+            Logger.lookupResponseDecoder.warning(
+                "[\(Self.self)] \(#function): Lookup response contained invalid artwork URL"
+            )
+        }
+        if record.fileSizeInBytes != nil, fileSizeInBytes == nil {
+            Logger.lookupResponseDecoder.warning(
+                "[\(Self.self)] \(#function): Lookup response contained invalid file size \(record.fileSizeInBytes ?? "", privacy: .public)"
+            )
+        }
+        Logger.lookupResponseDecoder.debug(
+            "[\(Self.self)] \(#function): Decoded lookup metadata: trackID=\(record.trackID, privacy: .public), version=\(record.version, privacy: .public)"
+        )
 
         return AppStoreMetadata(
             trackID: record.trackID,

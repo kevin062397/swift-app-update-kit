@@ -117,6 +117,7 @@ public final class UpdateChecker {
     /// A failure leaves `isUpdatePromptReady`, `availableUpdate`, and `lastOutcome` unchanged,
     /// so observable checker state survives a transient error.
     public func checkAtLaunch() {
+        Logger.updateChecker.debug("[\(Self.self)] \(#function): Scheduling launch update check")
         Task {
             do {
                 try await self.check()
@@ -141,6 +142,7 @@ public final class UpdateChecker {
         shouldBypassThrottle: Bool = false
     ) async throws(UpdateCheckFailure) -> UpdateCheckOutcome {
         if let existing = self.inFlightTask {
+            Logger.updateChecker.debug("[\(Self.self)] \(#function): Joining in-flight update check")
             let outcome = try await Self.extractOutcome(from: existing)
             Logger.updateChecker.debug(
                 "[\(Self.self)] \(#function): Update check outcome: \(String(describing: outcome), privacy: .public)"
@@ -165,6 +167,9 @@ public final class UpdateChecker {
         let task = Task<UpdateCheckOutcome, any Error> {
             try await pipeline.run()
         }
+        Logger.updateChecker.debug(
+            "[\(Self.self)] \(#function): Starting update check; bypassThrottle=\(shouldBypassThrottle, privacy: .public)"
+        )
         self.inFlightTask = task
         defer {
             self.inFlightTask = nil
@@ -216,9 +221,15 @@ public final class UpdateChecker {
     public func updateNow(for description: UpdateDescription) async {
         let appStoreURL = URL(string: "itms-apps://apps.apple.com/app/id\(description.metadata.trackID)")
         if let url = appStoreURL, await self.urlOpener.open(url) {
+            Logger.updateChecker.info(
+                "[\(Self.self)] \(#function): Opened App Store app URL for version \(description.storeVersionString, privacy: .public)"
+            )
             return
         }
         if await self.urlOpener.open(description.metadata.productPageURL) {
+            Logger.updateChecker.info(
+                "[\(Self.self)] \(#function): Opened App Store product page for version \(description.storeVersionString, privacy: .public)"
+            )
             return
         }
         Logger.updateChecker.error(
@@ -284,17 +295,29 @@ public final class UpdateChecker {
             }
         case .suppressed(.skipped(description: let description)):
             self.availableUpdate = description
+            Logger.updateChecker.info(
+                "[\(Self.self)] \(#function): Update \(description.storeVersionString, privacy: .public) available but skipped by user"
+            )
         case .suppressed(.snoozed(description: let description, _)):
             self.availableUpdate = description
+            Logger.updateChecker.info(
+                "[\(Self.self)] \(#function): Update \(description.storeVersionString, privacy: .public) available but snoozed"
+            )
         case .suppressed(.silentByPolicy(description: let description, _)):
             // The policy suppressed the prompt, but the store still has a newer version.
             self.availableUpdate = description
+            Logger.updateChecker.info(
+                "[\(Self.self)] \(#function): Update \(description.storeVersionString, privacy: .public) available but silent by policy"
+            )
             guard self.isUpdatePromptReady else { return }
             self.isUpdatePromptReady = false
             self.presentationState = .noPendingUpdate
         case .upToDate, .installedIsNewer:
             // The store confirms no newer version — clear both the available update and the pending flag.
             self.availableUpdate = nil
+            Logger.updateChecker.info(
+                "[\(Self.self)] \(#function): Clearing pending update after current-version outcome"
+            )
             guard self.isUpdatePromptReady else { return }
             self.isUpdatePromptReady = false
             self.presentationState = .noPendingUpdate

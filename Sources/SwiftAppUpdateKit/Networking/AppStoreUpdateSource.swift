@@ -39,6 +39,9 @@ struct AppStoreUpdateSource: UpdateSource {
         storefrontCountryCode: String?,
         languageCodes: [String]
     ) async throws(LookupRequestError) -> AppStoreMetadata {
+        Logger.appStoreUpdateSource.debug(
+            "[\(Self.self)] \(#function): Fetching metadata for bundle=\(bundleIdentifier, privacy: .public), storefront=\(storefrontCountryCode ?? "<default>", privacy: .public), languageCandidates=\(languageCodes.joined(separator: ","), privacy: .public)"
+        )
         for languageCode in languageCodes {
             let request = Self.buildRequest(
                 bundleIdentifier: bundleIdentifier,
@@ -135,10 +138,14 @@ struct AppStoreUpdateSource: UpdateSource {
         }
 
         do {
-            return try LookupResponseDecoder.decode(
+            let metadata = try LookupResponseDecoder.decode(
                 data,
                 expectedBundleIdentifier: expectedBundleIdentifier
             )
+            Logger.appStoreUpdateSource.debug(
+                "[\(Self.self)] \(#function): Lookup decoded metadata for version \(metadata.versionString, privacy: .public)"
+            )
+            return metadata
         } catch let decodeError as LookupDecodeError {
             Self.logDecodeFailure(decodeError, data: data)
             switch decodeError {

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 import StoreKit
 
 // MARK: - Protocol
@@ -30,19 +31,32 @@ struct StorefrontResolutionStrategy {
 
     func resolve() async -> String? {
         // Step 1: StoreKit storefront — authoritative, but alpha-3.
-        if let threeLetterCode = await self.fetchStorefrontThreeLetterCode(),
-            let twoLetterCode = StorefrontCountryCodeTable.countryCode(forThreeLetterStorefrontCode: threeLetterCode)
-        {
-            return twoLetterCode
+        if let threeLetterCode = await self.fetchStorefrontThreeLetterCode() {
+            if let twoLetterCode = StorefrontCountryCodeTable.countryCode(forThreeLetterStorefrontCode: threeLetterCode)
+            {
+                Logger.storefrontResolver.debug(
+                    "[\(Self.self)] \(#function): Resolved StoreKit storefront \(threeLetterCode, privacy: .public) to \(twoLetterCode, privacy: .public)"
+                )
+                return twoLetterCode
+            }
+            Logger.storefrontResolver.warning(
+                "[\(Self.self)] \(#function): StoreKit storefront code \(threeLetterCode, privacy: .public) was not found in the country-code table"
+            )
         }
         // Step 2: Device region — a proxy; differs for users with foreign Apple Accounts.
         if let regionCode = self.fetchDeviceRegionCode(),
             regionCode.count == 2,
             regionCode.allSatisfy({ $0.isASCII && $0.isLetter })
         {
+            Logger.storefrontResolver.info(
+                "[\(Self.self)] \(#function): Falling back to device region \(regionCode.uppercased(), privacy: .public)"
+            )
             return regionCode.uppercased()
         }
         // Step 3: No storefront parameter — Apple resolves this to the US storefront.
+        Logger.storefrontResolver.warning(
+            "[\(Self.self)] \(#function): Unable to resolve storefront or device region; lookup will omit country"
+        )
         return nil
     }
 }

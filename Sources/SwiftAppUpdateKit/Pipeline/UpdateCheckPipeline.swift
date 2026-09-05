@@ -20,8 +20,14 @@ struct BundleMetadata {
             let identifier = bundle.bundleIdentifier,
             let versionString = bundle.infoDictionary?["CFBundleShortVersionString"] as? String
         else {
+            Logger.updateCheckPipeline.error(
+                "[\(Self.self)] \(#function): Bundle identifier or CFBundleShortVersionString missing"
+            )
             return nil
         }
+        Logger.updateCheckPipeline.debug(
+            "[\(Self.self)] \(#function): Read bundle metadata: bundle=\(identifier, privacy: .public), version=\(versionString, privacy: .public)"
+        )
         return BundleMetadata(
             bundleIdentifier: identifier,
             installedVersionString: versionString,
@@ -167,6 +173,9 @@ struct UpdateCheckPipeline {
         // Must run immediately after a successful fetch and never after a failure, so that a single
         // offline launch does not silence checking for a full throttle window. Pruning happens here
         // so stale version-keyed entries are bounded even when later gates return early.
+        Logger.updateCheckPipeline.debug(
+            "[\(Self.self)] \(#function): Gate 5: Recording successful check and pruning stale prompt state"
+        )
         await self.promptStateStore.recordLastCheckDate(now)
         await self.promptStateStore.pruneEntries(olderThan: storeMetadata.version)
 

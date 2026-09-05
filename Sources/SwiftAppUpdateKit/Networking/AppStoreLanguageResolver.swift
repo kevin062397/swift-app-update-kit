@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// Resolves the language parameter used for App Store API requests.
 protocol AppStoreLanguageResolver: Sendable {
@@ -34,12 +35,21 @@ struct AppStoreLanguageResolutionStrategy {
         var seenLanguageCodes = Set<String>()
 
         for preferredLanguageIdentifier in self.preferredLanguageIdentifiers() {
-            for languageCode in Self.makeLanguageCodes(from: preferredLanguageIdentifier) {
+            let languageCodes = Self.makeLanguageCodes(from: preferredLanguageIdentifier)
+            if languageCodes.isEmpty {
+                Logger.appStoreLanguageResolver.warning(
+                    "[\(Self.self)] \(#function): Ignoring unsupported preferred language identifier \(preferredLanguageIdentifier, privacy: .public)"
+                )
+            }
+            for languageCode in languageCodes {
                 guard seenLanguageCodes.insert(languageCode).inserted else { continue }
                 resolvedLanguageCodes.append(languageCode)
             }
         }
 
+        Logger.appStoreLanguageResolver.debug(
+            "[\(Self.self)] \(#function): Resolved App Store language candidates: \(resolvedLanguageCodes.joined(separator: ","), privacy: .public)"
+        )
         return resolvedLanguageCodes
     }
 

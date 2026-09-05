@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 // MARK: - Protocol
 
@@ -64,11 +65,18 @@ actor UserDefaultsPromptStateStore: PromptStateStore {
     /// be opened.
     static func make(suiteName: String? = nil) -> any PromptStateStore {
         guard let suiteName else {
+            Logger.promptStateStore.debug("[\(Self.self)] \(#function): Using standard UserDefaults store")
             return UserDefaultsPromptStateStore(defaults: .standard)
         }
         guard let openedDefaults = UserDefaults(suiteName: suiteName) else {
+            Logger.promptStateStore.error(
+                "[\(Self.self)] \(#function): Failed to open UserDefaults suite \(suiteName, privacy: .public); using in-memory fallback"
+            )
             return InMemoryPromptStateStore()
         }
+        Logger.promptStateStore.debug(
+            "[\(Self.self)] \(#function): Using UserDefaults suite \(suiteName, privacy: .public)"
+        )
         return UserDefaultsPromptStateStore(defaults: openedDefaults)
     }
 
@@ -76,10 +84,19 @@ actor UserDefaultsPromptStateStore: PromptStateStore {
         guard let stored = self.defaults.object(forKey: Self.lastCheckDateKey) as? Date else {
             return nil
         }
-        return stored <= currentDate ? stored : nil
+        guard stored <= currentDate else {
+            Logger.promptStateStore.warning(
+                "[\(Self.self)] \(#function): Ignoring future last-check date \(String(describing: stored), privacy: .public)"
+            )
+            return nil
+        }
+        return stored
     }
 
     func recordLastCheckDate(_ date: Date) async {
+        Logger.promptStateStore.debug(
+            "[\(Self.self)] \(#function): Recording last-check date \(String(describing: date), privacy: .public)"
+        )
         self.defaults.set(date, forKey: Self.lastCheckDateKey)
     }
 
@@ -92,10 +109,19 @@ actor UserDefaultsPromptStateStore: PromptStateStore {
         guard let timestamp = stored[versionString] else { return nil }
         let expiry = Date(timeIntervalSinceReferenceDate: timestamp)
         let maximumAllowedFutureExpiry = currentDate.addingTimeInterval(snoozeInterval)
-        return expiry <= maximumAllowedFutureExpiry ? expiry : nil
+        guard expiry <= maximumAllowedFutureExpiry else {
+            Logger.promptStateStore.warning(
+                "[\(Self.self)] \(#function): Ignoring excessive snooze expiry for \(versionString, privacy: .public): \(String(describing: expiry), privacy: .public)"
+            )
+            return nil
+        }
+        return expiry
     }
 
     func recordSnooze(for versionString: String, expiry: Date) async {
+        Logger.promptStateStore.debug(
+            "[\(Self.self)] \(#function): Recording snooze for \(versionString, privacy: .public) until \(String(describing: expiry), privacy: .public)"
+        )
         var stored = self.defaults.dictionary(forKey: Self.snoozedVersionsKey) as? [String: Double] ?? [:]
         stored[versionString] = expiry.timeIntervalSinceReferenceDate
         self.defaults.set(stored, forKey: Self.snoozedVersionsKey)
@@ -109,18 +135,33 @@ actor UserDefaultsPromptStateStore: PromptStateStore {
     func recordSkip(for versionString: String) async {
         var stored = self.defaults.stringArray(forKey: Self.skippedVersionsKey) ?? []
         if !stored.contains(versionString) {
+            Logger.promptStateStore.debug(
+                "[\(Self.self)] \(#function): Recording skip for \(versionString, privacy: .public)"
+            )
             stored.append(versionString)
             self.defaults.set(stored, forKey: Self.skippedVersionsKey)
+        } else {
+            Logger.promptStateStore.debug(
+                "[\(Self.self)] \(#function): Skip for \(versionString, privacy: .public) already recorded"
+            )
         }
     }
 
     func pruneEntries(olderThan currentStoreVersion: AppVersion) async {
         if var snoozed = self.defaults.dictionary(forKey: Self.snoozedVersionsKey) as? [String: Double] {
+            let originalCount = snoozed.count
             snoozed = snoozed.filter { AppVersion($0.key) >= currentStoreVersion }
+            Logger.promptStateStore.debug(
+                "[\(Self.self)] \(#function): Pruned \(originalCount - snoozed.count, privacy: .public) snoozed version entries older than \(String(describing: currentStoreVersion), privacy: .public)"
+            )
             self.defaults.set(snoozed, forKey: Self.snoozedVersionsKey)
         }
         if var skipped = self.defaults.stringArray(forKey: Self.skippedVersionsKey) {
+            let originalCount = skipped.count
             skipped = skipped.filter { AppVersion($0) >= currentStoreVersion }
+            Logger.promptStateStore.debug(
+                "[\(Self.self)] \(#function): Pruned \(originalCount - skipped.count, privacy: .public) skipped version entries older than \(String(describing: currentStoreVersion), privacy: .public)"
+            )
             self.defaults.set(skipped, forKey: Self.skippedVersionsKey)
         }
     }
@@ -135,10 +176,19 @@ actor InMemoryPromptStateStore: PromptStateStore {
 
     func lastCheckDate(currentDate: Date) async -> Date? {
         guard let stored = self.storedLastCheckDate else { return nil }
-        return stored <= currentDate ? stored : nil
+        guard stored <= currentDate else {
+            Logger.promptStateStore.warning(
+                "[\(Self.self)] \(#function): Ignoring future last-check date \(String(describing: stored), privacy: .public)"
+            )
+            return nil
+        }
+        return stored
     }
 
     func recordLastCheckDate(_ date: Date) async {
+        Logger.promptStateStore.debug(
+            "[\(Self.self)] \(#function): Recording in-memory last-check date \(String(describing: date), privacy: .public)"
+        )
         self.storedLastCheckDate = date
     }
 
@@ -149,10 +199,19 @@ actor InMemoryPromptStateStore: PromptStateStore {
     ) async -> Date? {
         guard let expiry = self.snoozedVersions[versionString] else { return nil }
         let maximumAllowedFutureExpiry = currentDate.addingTimeInterval(snoozeInterval)
-        return expiry <= maximumAllowedFutureExpiry ? expiry : nil
+        guard expiry <= maximumAllowedFutureExpiry else {
+            Logger.promptStateStore.warning(
+                "[\(Self.self)] \(#function): Ignoring excessive snooze expiry for \(versionString, privacy: .public): \(String(describing: expiry), privacy: .public)"
+            )
+            return nil
+        }
+        return expiry
     }
 
     func recordSnooze(for versionString: String, expiry: Date) async {
+        Logger.promptStateStore.debug(
+            "[\(Self.self)] \(#function): Recording in-memory snooze for \(versionString, privacy: .public) until \(String(describing: expiry), privacy: .public)"
+        )
         self.snoozedVersions[versionString] = expiry
     }
 
@@ -161,11 +220,19 @@ actor InMemoryPromptStateStore: PromptStateStore {
     }
 
     func recordSkip(for versionString: String) async {
+        Logger.promptStateStore.debug(
+            "[\(Self.self)] \(#function): Recording in-memory skip for \(versionString, privacy: .public)"
+        )
         self.skippedVersions.insert(versionString)
     }
 
     func pruneEntries(olderThan currentStoreVersion: AppVersion) async {
+        let originalSnoozedCount = self.snoozedVersions.count
+        let originalSkippedCount = self.skippedVersions.count
         self.snoozedVersions = self.snoozedVersions.filter { AppVersion($0.key) >= currentStoreVersion }
         self.skippedVersions = self.skippedVersions.filter { AppVersion($0) >= currentStoreVersion }
+        Logger.promptStateStore.debug(
+            "[\(Self.self)] \(#function): Pruned \(originalSnoozedCount - self.snoozedVersions.count, privacy: .public) in-memory snoozed entries and \(originalSkippedCount - self.skippedVersions.count, privacy: .public) skipped entries older than \(String(describing: currentStoreVersion), privacy: .public)"
+        )
     }
 }

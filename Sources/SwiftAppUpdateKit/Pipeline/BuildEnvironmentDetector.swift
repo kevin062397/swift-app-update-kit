@@ -88,6 +88,9 @@ struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
         var size = MemoryLayout<kinfo_proc>.stride
         let returnCode = sysctl(&mib, UInt32(mib.count), &kinfo, &size, nil, 0)
         guard returnCode == 0 else {
+            Logger.buildEnvironmentDetector.warning(
+                "[\(Self.self)] \(#function): sysctl debugger detection failed with code \(returnCode, privacy: .public); treating debugger as detached"
+            )
             return false
         }
         return (kinfo.kp_proc.p_flag & P_TRACED) != 0
