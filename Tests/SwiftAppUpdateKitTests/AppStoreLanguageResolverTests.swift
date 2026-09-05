@@ -10,49 +10,97 @@ import Testing
 @testable import SwiftAppUpdateKit
 
 struct AppStoreLanguageResolverTests {
-    @Test func regionLanguageIdentifierUsesLowercaseUnderscoreFormat() {
-        let languageCode = AppStoreLanguageResolutionStrategy.languageCode(from: "en-US")
+    @Test func regionLanguageIdentifierProducesRegionalCandidateBeforeLanguageCandidate() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "en-US")
 
-        #expect(languageCode == "en_us")
+        #expect(languageCodes == ["en_us", "en"])
     }
 
-    @Test func underscoreSeparatedRegionIdentifierIsAccepted() {
-        let languageCode = AppStoreLanguageResolutionStrategy.languageCode(from: "fr_CA")
+    @Test func underscoreSeparatedRegionIdentifierProducesRegionalCandidateBeforeLanguageCandidate() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "fr_CA")
 
-        #expect(languageCode == "fr_ca")
+        #expect(languageCodes == ["fr_ca", "fr"])
+    }
+
+    @Test func systemRegionCanBeTriedBeforeLanguageFallback() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "fr-US")
+
+        #expect(languageCodes == ["fr_us", "fr"])
+    }
+
+    @Test func supportedLanguageWithoutRegionUsesLanguageSubtag() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "fr")
+
+        #expect(languageCodes == ["fr"])
     }
 
     @Test func scriptSubtagIsSkippedWhenRegionIsPresent() {
-        let languageCode = AppStoreLanguageResolutionStrategy.languageCode(from: "zh-Hans-CN")
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "zh-Hans-CN")
 
-        #expect(languageCode == "zh_cn")
+        #expect(languageCodes == ["zh_cn"])
     }
 
-    @Test func nonChineseScriptSubtagIsSkippedWhenRegionIsPresent() {
-        let languageCode = AppStoreLanguageResolutionStrategy.languageCode(from: "sr-Latn-RS")
+    @Test func simplifiedChineseScriptUsesChineseAppStoreLanguageCode() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "zh-Hans-US")
 
-        #expect(languageCode == "sr_rs")
+        #expect(languageCodes == ["zh_cn"])
     }
 
-    @Test func languageWithoutRegionReturnsNil() {
-        let languageCode = AppStoreLanguageResolutionStrategy.languageCode(from: "zh-Hant")
+    @Test func traditionalChineseScriptUsesTaiwanAppStoreLanguageCode() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "zh-Hant-US")
 
-        #expect(languageCode == nil)
+        #expect(languageCodes == ["zh_tw"])
     }
 
-    @Test func resolverUsesFirstResolvablePreferredLanguage() {
+    @Test func hongKongChineseRegionUsesHongKongAppStoreLanguageCode() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "zh-HK")
+
+        #expect(languageCodes == ["zh_hk"])
+    }
+
+    @Test func hongKongTraditionalChineseUsesHongKongAppStoreLanguageCode() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "zh-Hant-HK")
+
+        #expect(languageCodes == ["zh_hk"])
+    }
+
+    @Test func macauChineseRegionUsesHongKongAppStoreLanguageCode() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "zh-MO")
+
+        #expect(languageCodes == ["zh_hk"])
+    }
+
+    @Test func macauTraditionalChineseUsesHongKongAppStoreLanguageCode() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "zh-Hant-MO")
+
+        #expect(languageCodes == ["zh_hk"])
+    }
+
+    @Test func regionalLanguageIdentifierUsesRegionCandidateBeforeLanguageFallback() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "sr-Latn-RS")
+
+        #expect(languageCodes == ["sr_rs", "sr"])
+    }
+
+    @Test func languageWithoutRegionUsesLanguageSubtag() {
+        let languageCodes = AppStoreLanguageResolutionStrategy.makeLanguageCodes(from: "sr")
+
+        #expect(languageCodes == ["sr"])
+    }
+
+    @Test func resolverDeduplicatesLanguageCodesWhilePreservingOrder() {
         let strategy = AppStoreLanguageResolutionStrategy(
-            preferredLanguageIdentifiers: { ["123", "en-US"] }
+            preferredLanguageIdentifiers: { ["123", "fr-US", "fr-CA", "fr"] }
         )
 
-        #expect(strategy.resolveLanguageCode() == "en_us")
+        #expect(strategy.resolveLanguageCodes() == ["fr_us", "fr", "fr_ca"])
     }
 
-    @Test func resolverReturnsNilWhenNoPreferredLanguageCanBeResolved() {
+    @Test func resolverReturnsEmptyArrayWhenNoPreferredLanguageIdentifierCanBeParsed() {
         let strategy = AppStoreLanguageResolutionStrategy(
             preferredLanguageIdentifiers: { ["123", "-"] }
         )
 
-        #expect(strategy.resolveLanguageCode() == nil)
+        #expect(strategy.resolveLanguageCodes().isEmpty)
     }
 }

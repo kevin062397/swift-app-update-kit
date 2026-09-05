@@ -13,6 +13,8 @@ enum LookupRequestError: Error, Equatable {
     case serverError(statusCode: Int)
     /// The response body could not be decoded into the expected shape.
     case malformedResponse
+    /// The endpoint rejected the requested response language.
+    case unsupportedLanguageCode
     /// The lookup succeeded but returned no app for the queried storefront.
     case absentFromStorefront
     /// The response describes a different bundle identifier than the one requested.
@@ -28,7 +30,7 @@ enum LookupRequestError: Error, Equatable {
             return true
         case .serverError(let statusCode):
             return statusCode >= 500
-        case .malformedResponse, .absentFromStorefront, .identityMismatch:
+        case .malformedResponse, .unsupportedLanguageCode, .absentFromStorefront, .identityMismatch:
             return false
         }
     }

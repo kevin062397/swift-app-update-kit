@@ -145,13 +145,13 @@ struct UpdateCheckPipeline {
             "[\(Self.self)] \(#function): Gate 4: Fetching store metadata for \(bundleMetadata.bundleIdentifier, privacy: .public)"
         )
         let storefrontCode = await self.storefrontResolver.resolveStorefrontCountryCode()
-        let languageCode = self.appStoreLanguageResolver.resolveLanguageCode()
+        let languageCodes = self.appStoreLanguageResolver.resolveLanguageCodes()
         let storeMetadata: AppStoreMetadata
         do throws(LookupRequestError) {
             storeMetadata = try await self.updateSource.fetchMetadata(
                 bundleIdentifier: bundleMetadata.bundleIdentifier,
                 storefrontCountryCode: storefrontCode,
-                languageCode: languageCode
+                languageCodes: languageCodes
             )
         } catch {
             Logger.updateCheckPipeline.error(

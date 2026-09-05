@@ -37,19 +37,52 @@ struct AppStoreUpdateSource: UpdateSource {
     func fetchMetadata(
         bundleIdentifier: String,
         storefrontCountryCode: String?,
-        languageCode: String?
+        languageCodes: [String]
     ) async throws(LookupRequestError) -> AppStoreMetadata {
-        let url = Self.buildLookupURL(
+        for languageCode in languageCodes {
+            let request = Self.buildRequest(
+                bundleIdentifier: bundleIdentifier,
+                storefrontCountryCode: storefrontCountryCode,
+                languageCode: languageCode
+            )
+
+            do {
+                return try await self.fetchMetadata(
+                    request: request,
+                    expectedBundleIdentifier: bundleIdentifier
+                )
+            } catch .unsupportedLanguageCode {
+                Logger.appStoreUpdateSource.info(
+                    "[\(Self.self)] \(#function): Continuing lookup with the next language candidate"
+                )
+            }
+        }
+
+        if !languageCodes.isEmpty {
+            Logger.appStoreUpdateSource.info(
+                "[\(Self.self)] \(#function): Retrying lookup without a language code after unsupported language responses"
+            )
+        }
+
+        let fallbackRequest = Self.buildRequest(
             bundleIdentifier: bundleIdentifier,
             storefrontCountryCode: storefrontCountryCode,
-            languageCode: languageCode
+            languageCode: nil
         )
-        let request = Self.buildRequest(for: url)
+        return try await self.fetchMetadata(
+            request: fallbackRequest,
+            expectedBundleIdentifier: bundleIdentifier
+        )
+    }
 
+    private func fetchMetadata(
+        request: URLRequest,
+        expectedBundleIdentifier: String
+    ) async throws(LookupRequestError) -> AppStoreMetadata {
         do {
             return try await self.attemptFetch(
                 request: request,
-                expectedBundleIdentifier: bundleIdentifier
+                expectedBundleIdentifier: expectedBundleIdentifier
             )
         } catch {
             guard error.isRetryable else { throw error }
@@ -61,7 +94,7 @@ struct AppStoreUpdateSource: UpdateSource {
         try? await Task.sleep(for: self.retryDelay)
         return try await self.attemptFetch(
             request: request,
-            expectedBundleIdentifier: bundleIdentifier
+            expectedBundleIdentifier: expectedBundleIdentifier
         )
     }
 
@@ -85,6 +118,12 @@ struct AppStoreUpdateSource: UpdateSource {
         }
 
         Self.logResponseMetadata(response, byteCount: data.count)
+        guard !Self.isUnsupportedLanguageResponse(data) else {
+            Logger.appStoreUpdateSource.info(
+                "[\(Self.self)] \(#function): Lookup request received unsupported language response"
+            )
+            throw .unsupportedLanguageCode
+        }
 
         if let httpResponse = response as? HTTPURLResponse,
             !(200..<300).contains(httpResponse.statusCode)
@@ -147,6 +186,17 @@ struct AppStoreUpdateSource: UpdateSource {
         return preview
     }
 
+    private static func isUnsupportedLanguageResponse(_ data: Data) -> Bool {
+        guard
+            let errorResponse = try? JSONDecoder().decode(LookupErrorResponse.self, from: data),
+            errorResponse.errorMessage?.contains("Invalid value") == true,
+            errorResponse.queryParameters.keys.contains("lang")
+        else {
+            return false
+        }
+        return true
+    }
+
     private static func buildLookupURL(
         bundleIdentifier: String,
         storefrontCountryCode: String?,
@@ -168,9 +218,27 @@ struct AppStoreUpdateSource: UpdateSource {
         return components.url!
     }
 
+    private static func buildRequest(
+        bundleIdentifier: String,
+        storefrontCountryCode: String?,
+        languageCode: String?
+    ) -> URLRequest {
+        let url = Self.buildLookupURL(
+            bundleIdentifier: bundleIdentifier,
+            storefrontCountryCode: storefrontCountryCode,
+            languageCode: languageCode
+        )
+        return Self.buildRequest(for: url)
+    }
+
     private static func buildRequest(for url: URL) -> URLRequest {
         var request = URLRequest(url: url, timeoutInterval: Self.requestTimeoutInterval)
         request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         return request
     }
+}
+
+private struct LookupErrorResponse: Decodable {
+    let errorMessage: String?
+    let queryParameters: [String: String]
 }

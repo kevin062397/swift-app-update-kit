@@ -31,7 +31,7 @@ struct LiveEndpointTests {
         let metadata = try await self.source.fetchMetadata(
             bundleIdentifier: appBundleIdentifier,
             storefrontCountryCode: "US",
-            languageCode: "en_us"
+            languageCodes: ["en_us"]
         )
         #expect(metadata.trackID > 0)
         #expect(!metadata.versionString.isEmpty)
@@ -47,7 +47,7 @@ struct LiveEndpointTests {
         let metadata = try await self.source.fetchMetadata(
             bundleIdentifier: appBundleIdentifier,
             storefrontCountryCode: "GB",
-            languageCode: "en_us"
+            languageCodes: ["en_us"]
         )
         #expect(!metadata.versionString.isEmpty)
         #expect(metadata.productPageURL.scheme == "https")

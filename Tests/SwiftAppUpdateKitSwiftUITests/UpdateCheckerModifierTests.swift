@@ -29,7 +29,7 @@ private actor ModifierMockUpdateSource: UpdateSource {
     func fetchMetadata(
         bundleIdentifier _: String,
         storefrontCountryCode _: String?,
-        languageCode _: String?
+        languageCodes _: [String]
     ) async throws(LookupRequestError) -> AppStoreMetadata {
         return self.metadata
     }
@@ -42,8 +42,8 @@ private struct ModifierMockStorefrontResolver: StorefrontResolver {
 }
 
 private struct ModifierMockAppStoreLanguageResolver: AppStoreLanguageResolver {
-    func resolveLanguageCode() -> String? {
-        return "en_us"
+    func resolveLanguageCodes() -> [String] {
+        return ["en_us"]
     }
 }
 

@@ -29,7 +29,7 @@ private actor MockUpdateSource: UpdateSource {
     private(set) var callCount = 0
     private(set) var capturedBundleIdentifier: String?
     private(set) var capturedStorefrontCountryCode: String?
-    private(set) var capturedLanguageCode: String?
+    private(set) var capturedLanguageCodes: [String] = []
 
     init(result: MockResult) {
         self.mockResult = result
@@ -38,12 +38,12 @@ private actor MockUpdateSource: UpdateSource {
     func fetchMetadata(
         bundleIdentifier: String,
         storefrontCountryCode: String?,
-        languageCode: String?
+        languageCodes: [String]
     ) async throws(LookupRequestError) -> AppStoreMetadata {
         self.callCount += 1
         self.capturedBundleIdentifier = bundleIdentifier
         self.capturedStorefrontCountryCode = storefrontCountryCode
-        self.capturedLanguageCode = languageCode
+        self.capturedLanguageCodes = languageCodes
         switch self.mockResult {
         case .success(let metadata):
             return metadata
@@ -60,14 +60,14 @@ private struct MockStorefrontResolver: StorefrontResolver {
 }
 
 private struct MockAppStoreLanguageResolver: AppStoreLanguageResolver {
-    let languageCode: String?
+    let languageCodes: [String]
 
-    init(languageCode: String? = "en_us") {
-        self.languageCode = languageCode
+    init(languageCodes: [String] = ["en_us"]) {
+        self.languageCodes = languageCodes
     }
 
-    func resolveLanguageCode() -> String? {
-        return self.languageCode
+    func resolveLanguageCodes() -> [String] {
+        return self.languageCodes
     }
 }
 
@@ -349,7 +349,7 @@ struct UpdateCheckPipelineTests {
 
         #expect(await source.capturedBundleIdentifier == "com.example.app")
         #expect(await source.capturedStorefrontCountryCode == "US")
-        #expect(await source.capturedLanguageCode == "en_us")
+        #expect(await source.capturedLanguageCodes == ["en_us"])
     }
 
     @Test func successfulRequestPrunesStalePromptState() async throws {

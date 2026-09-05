@@ -9,7 +9,7 @@ import Foundation
 
 /// Resolves the language parameter used for App Store API requests.
 protocol AppStoreLanguageResolver: Sendable {
-    func resolveLanguageCode() -> String?
+    func resolveLanguageCodes() -> [String]
 }
 
 struct PreferredAppStoreLanguageResolver: AppStoreLanguageResolver {
@@ -21,42 +21,78 @@ struct PreferredAppStoreLanguageResolver: AppStoreLanguageResolver {
         )
     }
 
-    func resolveLanguageCode() -> String? {
-        return self.strategy.resolveLanguageCode()
+    func resolveLanguageCodes() -> [String] {
+        return self.strategy.resolveLanguageCodes()
     }
 }
 
 struct AppStoreLanguageResolutionStrategy {
     let preferredLanguageIdentifiers: @Sendable () -> [String]
 
-    func resolveLanguageCode() -> String? {
-        for identifier in self.preferredLanguageIdentifiers() {
-            if let languageCode = Self.languageCode(from: identifier) {
-                return languageCode
+    func resolveLanguageCodes() -> [String] {
+        var resolvedLanguageCodes: [String] = []
+        var seenLanguageCodes = Set<String>()
+
+        for preferredLanguageIdentifier in self.preferredLanguageIdentifiers() {
+            for languageCode in Self.makeLanguageCodes(from: preferredLanguageIdentifier) {
+                guard seenLanguageCodes.insert(languageCode).inserted else { continue }
+                resolvedLanguageCodes.append(languageCode)
             }
         }
-        return nil
+
+        return resolvedLanguageCodes
     }
 
-    static func languageCode(from identifier: String) -> String? {
+    static func makeLanguageCodes(from identifier: String) -> [String] {
         let languageIdentifierParts =
             identifier
             .split(whereSeparator: { $0 == "-" || $0 == "_" })
             .map(String.init)
         guard
             let languageSubtag = languageIdentifierParts.first?.lowercased(),
+            languageSubtag.count == 2,
             Self.isAlphabetic(languageSubtag)
         else {
-            return nil
+            return []
         }
 
-        for possibleRegionSubtag in languageIdentifierParts.dropFirst() {
-            let regionSubtag = possibleRegionSubtag.lowercased()
-            if possibleRegionSubtag.count == 2, Self.isAlphabetic(regionSubtag) {
-                return "\(languageSubtag)_\(regionSubtag)"
-            }
+        let trailingSubtags = languageIdentifierParts.dropFirst().map { $0.lowercased() }
+        if languageSubtag == "zh" {
+            return Self.makeChineseLanguageCodes(from: trailingSubtags)
         }
-        return nil
+
+        var languageCodes: [String] = []
+        if let regionSubtag = Self.findRegionSubtag(from: trailingSubtags) {
+            languageCodes.append("\(languageSubtag)_\(regionSubtag)")
+        }
+        languageCodes.append(languageSubtag)
+        return languageCodes
+    }
+
+    private static func makeChineseLanguageCodes(from chineseSubtags: [String]) -> [String] {
+        // The API's bare "zh" language code resolves to Traditional Chinese, so keep Chinese explicit.
+        if chineseSubtags.contains("hans") {
+            return ["zh_cn"]
+        }
+        if chineseSubtags.contains("hant") {
+            return chineseSubtags.contains("hk") || chineseSubtags.contains("mo") ? ["zh_hk"] : ["zh_tw"]
+        }
+        if chineseSubtags.contains("cn") || chineseSubtags.contains("sg") {
+            return ["zh_cn"]
+        }
+        if chineseSubtags.contains("hk") || chineseSubtags.contains("mo") {
+            return ["zh_hk"]
+        }
+        if chineseSubtags.contains("tw") {
+            return ["zh_tw"]
+        }
+        return []
+    }
+
+    private static func findRegionSubtag(from trailingSubtags: [String]) -> String? {
+        return trailingSubtags.first { subtag in
+            subtag.count == 2 && Self.isAlphabetic(subtag)
+        }
     }
 
     private static func isAlphabetic(_ value: String) -> Bool {

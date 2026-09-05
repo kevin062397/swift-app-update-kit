@@ -14,6 +14,6 @@ protocol UpdateSource: Sendable {
     func fetchMetadata(
         bundleIdentifier: String,
         storefrontCountryCode: String?,
-        languageCode: String?
+        languageCodes: [String]
     ) async throws(LookupRequestError) -> AppStoreMetadata
 }

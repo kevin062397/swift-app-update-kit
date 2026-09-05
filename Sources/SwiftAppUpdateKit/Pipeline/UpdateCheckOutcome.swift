@@ -37,6 +37,8 @@ extension LookupRequestError {
             return .serverError(statusCode: statusCode)
         case .malformedResponse:
             return .malformedResponse
+        case .unsupportedLanguageCode:
+            return .malformedResponse
         case .absentFromStorefront:
             return .absentFromStorefront
         case .identityMismatch:
