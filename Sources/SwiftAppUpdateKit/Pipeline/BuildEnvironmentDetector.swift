@@ -22,14 +22,14 @@ public enum AppBuildEnvironment: Equatable, Sendable {
 
     /// Detects the distribution environment of the running app.
     public static func current() async -> AppBuildEnvironment {
-        return await AppStoreBuildEnvironmentDetector().environment()
+        return await AppStoreBuildEnvironmentDetector().currentEnvironment()
     }
 }
 
 // MARK: - Protocol
 
 protocol BuildEnvironmentDetector: Sendable {
-    func isProductionBuild() async -> Bool
+    func currentEnvironment() async -> AppBuildEnvironment
 }
 
 // MARK: - Detection Strategy
@@ -80,11 +80,7 @@ struct BuildEnvironmentDetectionStrategy {
 /// The production build environment detector that queries StoreKit's app transaction
 /// and inspects the running process for simulator and debugger conditions.
 struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
-    func isProductionBuild() async -> Bool {
-        return await self.environment() == .production
-    }
-
-    func environment() async -> AppBuildEnvironment {
+    func currentEnvironment() async -> AppBuildEnvironment {
         return await BuildEnvironmentDetectionStrategy(
             isRunningInSimulator: Self.isRunningInSimulator,
             isDebuggerAttached: Self.isDebuggerCurrentlyAttached(),

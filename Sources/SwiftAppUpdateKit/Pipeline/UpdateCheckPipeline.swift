@@ -127,7 +127,7 @@ struct UpdateCheckPipeline {
         // Placed after the throttle gate so that the StoreKit lookup is skipped on throttled launches.
         Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2: Checking build environment")
         if !self.shouldBypassProductionBuildCheck,
-            await !self.buildEnvironmentDetector.isProductionBuild()
+            await self.buildEnvironmentDetector.currentEnvironment() != .production
         {
             Logger.updateCheckPipeline.info("[\(Self.self)] \(#function): Gate 2 suppressed: Non-production build")
             return .suppressed(.nonProductionBuild)

@@ -14,8 +14,8 @@ import Testing
 // MARK: - Mocks
 
 private struct ModifierMockBuildEnvironmentDetector: BuildEnvironmentDetector {
-    func isProductionBuild() async -> Bool {
-        return true
+    func currentEnvironment() async -> AppBuildEnvironment {
+        return .production
     }
 }
 

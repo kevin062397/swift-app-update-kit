@@ -13,9 +13,9 @@ import Testing
 // MARK: - Mocks
 
 private struct MockBuildEnvironmentDetector: BuildEnvironmentDetector {
-    let isProduction: Bool
-    func isProductionBuild() async -> Bool {
-        return self.isProduction
+    let environment: AppBuildEnvironment
+    func currentEnvironment() async -> AppBuildEnvironment {
+        return self.environment
     }
 }
 
@@ -118,7 +118,7 @@ struct UpdateCheckPipelineTests {
     private func makePipeline(
         policy: UpdatePolicy = allOptionalPolicy,
         promptStateStore: any PromptStateStore,
-        isProduction: Bool = true,
+        environment: AppBuildEnvironment = .production,
         bundleMetadata: BundleMetadata? = nil,
         updateSource: any UpdateSource,
         currentDate: Date,
@@ -139,7 +139,7 @@ struct UpdateCheckPipelineTests {
                 shouldBypassProductionBuildCheck: shouldBypassProductionBuildCheck
             ),
             promptStateStore: promptStateStore,
-            buildEnvironmentDetector: MockBuildEnvironmentDetector(isProduction: isProduction),
+            buildEnvironmentDetector: MockBuildEnvironmentDetector(environment: environment),
             updateSource: updateSource,
             storefrontResolver: MockStorefrontResolver(),
             appStoreLanguageResolver: MockAppStoreLanguageResolver(),
@@ -221,12 +221,13 @@ struct UpdateCheckPipelineTests {
 
     // MARK: - Gate 2: Production Build
 
-    @Test func nonProductionBuildIsSuppressed() async throws {
+    @Test(arguments: [AppBuildEnvironment.test, .development])
+    func nonProductionBuildIsSuppressed(environment: AppBuildEnvironment) async throws {
         let store = InMemoryPromptStateStore()
         let source = MockUpdateSource(result: .success(self.makeStoreMetadata()))
         let pipeline = self.makePipeline(
             promptStateStore: store,
-            isProduction: false,
+            environment: environment,
             updateSource: source,
             currentDate: self.referenceDate
         )
@@ -237,12 +238,13 @@ struct UpdateCheckPipelineTests {
         #expect(await source.callCount == 0)
     }
 
-    @Test func nonProductionBuildWithCheckBypassedProceedsPastGate() async throws {
+    @Test(arguments: [AppBuildEnvironment.test, .development])
+    func nonProductionBuildWithCheckBypassedProceedsPastGate(environment: AppBuildEnvironment) async throws {
         let store = InMemoryPromptStateStore()
         let source = MockUpdateSource(result: .success(self.makeStoreMetadata()))
         let pipeline = self.makePipeline(
             promptStateStore: store,
-            isProduction: false,
+            environment: environment,
             updateSource: source,
             currentDate: self.referenceDate,
             shouldBypassProductionBuildCheck: true
@@ -264,7 +266,7 @@ struct UpdateCheckPipelineTests {
         let source = MockUpdateSource(result: .success(self.makeStoreMetadata()))
         let pipeline = self.makePipeline(
             promptStateStore: store,
-            isProduction: true,
+            environment: .production,
             updateSource: source,
             currentDate: self.referenceDate,
             shouldBypassProductionBuildCheck: true
@@ -287,7 +289,7 @@ struct UpdateCheckPipelineTests {
         let pipeline = UpdateCheckPipeline(
             configuration: UpdateCheckConfiguration(policy: Self.allOptionalPolicy),
             promptStateStore: store,
-            buildEnvironmentDetector: MockBuildEnvironmentDetector(isProduction: true),
+            buildEnvironmentDetector: MockBuildEnvironmentDetector(environment: .production),
             updateSource: source,
             storefrontResolver: MockStorefrontResolver(),
             appStoreLanguageResolver: MockAppStoreLanguageResolver(),

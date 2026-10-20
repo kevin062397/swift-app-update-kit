@@ -13,9 +13,9 @@ import Testing
 // MARK: - Mocks
 
 private struct CheckerMockBuildEnvironmentDetector: BuildEnvironmentDetector {
-    let isProduction: Bool
-    func isProductionBuild() async -> Bool {
-        return self.isProduction
+    let environment: AppBuildEnvironment
+    func currentEnvironment() async -> AppBuildEnvironment {
+        return self.environment
     }
 }
 
@@ -143,14 +143,14 @@ private struct MockURLOpener: URLOpener {
     private func makeChecker(
         updateSource: any UpdateSource,
         promptStateStore: any PromptStateStore = InMemoryPromptStateStore(),
-        isProduction: Bool = true,
+        environment: AppBuildEnvironment = .production,
         urlOpener: any URLOpener = MockURLOpener(record: URLOpenRecord())
     ) -> UpdateChecker {
         let installedVersionString = Self.installedVersionString
         return UpdateChecker(
             configuration: UpdateCheckConfiguration(policy: Self.allOptionalPolicy),
             promptStateStore: promptStateStore,
-            buildEnvironmentDetector: CheckerMockBuildEnvironmentDetector(isProduction: isProduction),
+            buildEnvironmentDetector: CheckerMockBuildEnvironmentDetector(environment: environment),
             updateSource: updateSource,
             storefrontResolver: CheckerMockStorefrontResolver(),
             appStoreLanguageResolver: CheckerMockAppStoreLanguageResolver(),
@@ -513,7 +513,7 @@ private struct MockURLOpener: URLOpener {
         let checker = UpdateChecker(
             configuration: UpdateCheckConfiguration(policy: allSilentPolicy),
             promptStateStore: InMemoryPromptStateStore(),
-            buildEnvironmentDetector: CheckerMockBuildEnvironmentDetector(isProduction: true),
+            buildEnvironmentDetector: CheckerMockBuildEnvironmentDetector(environment: .production),
             updateSource: source,
             storefrontResolver: CheckerMockStorefrontResolver(),
             appStoreLanguageResolver: CheckerMockAppStoreLanguageResolver(),
