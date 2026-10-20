@@ -6,6 +6,7 @@ SwiftAppUpdateKit is a Swift package that detects when a newer version of your a
 
 - **Automatic presentation** — one view modifier wires up launch-triggered checks and update prompt presentation
 - **Eleven-gate decision pipeline** — throttle, build environment, OS compatibility, release age, policy, skip, and snooze gates filter noise before any prompt appears
+- **Build environment classification** — asynchronously identify production, test, and development builds with `AppBuildEnvironment.current()`
 - **Configurable policy** — map each version classification (major, minor, patch, revision) to silent, optional, or required
 - **Optional update** — offers update, defer, and skip actions
 - **Required update** — disables dismiss and offers only the update action
@@ -137,7 +138,7 @@ The release age gate guards against the iTunes Lookup API leading the App Store 
 
 ## Testing
 
-The production gate always returns `.suppressed(.nonProductionBuild)` in the Simulator and with a debugger attached, preventing development builds from consuming snooze or skip tokens. To exercise the full pipeline on a device without a production build, set `shouldBypassProductionBuildCheck: true` in your configuration — do not ship this to users.
+`AppBuildEnvironment.current()` asynchronously reports `.production`, `.test`, or `.development`. Simulator, debugger, and Xcode environments are development; StoreKit sandbox environments, including TestFlight, are test; and App Store environments are production. The update pipeline returns `.suppressed(.nonProductionBuild)` for test and development environments, preventing those builds from consuming snooze or skip tokens. Set `shouldBypassProductionBuildCheck: true` while exercising the full pipeline outside production, and keep the production configuration at its default value.
 
 To preview the update prompt layout, instantiate `UpdatePromptView` directly with any data you construct — no checker or network call needed. The full DocC article covers both view testing and on-device pipeline testing.
 

@@ -22,6 +22,10 @@ All external inputs — the update policy, the presentation permission, the snoo
 - ``UpdatePolicy``
 - ``UpdateRequirement``
 
+### Build Environment
+
+- ``AppBuildEnvironment``
+
 ### Check Outcomes
 
 - ``UpdateCheckOutcome``

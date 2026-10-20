@@ -72,7 +72,23 @@ UpdatePromptView(
 
 ## Understanding the Production Gate
 
-``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/check(shouldBypassThrottle:)`` always return `.suppressed(.nonProductionBuild)` when running in the Simulator or with a debugger attached. This is intentional — it prevents a development build from consuming a snooze or skip token, and from prompting during a UI review session.
+SwiftAppUpdateKit classifies the running app as one of three ``AppBuildEnvironment`` values:
+
+| Environment                         | Applies to                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| ``AppBuildEnvironment/development`` | The Simulator, a debugger-attached process, or an app transaction reported by StoreKit as Xcode. |
+| ``AppBuildEnvironment/test``        | A StoreKit sandbox app transaction, including TestFlight.                                        |
+| ``AppBuildEnvironment/production``  | An App Store production app transaction.                                                         |
+
+Simulator and debugger detection take precedence over the StoreKit lookup. If StoreKit cannot provide the app transaction environment, classification falls back to ``AppBuildEnvironment/production`` so an unavailable lookup does not disable update checking for App Store users.
+
+Read the current classification asynchronously when your integration needs to label diagnostics or adapt development tooling:
+
+```swift
+let environment = await AppBuildEnvironment.current()
+```
+
+``UpdateChecker/checkAtLaunch()`` and ``UpdateChecker/check(shouldBypassThrottle:)`` return `.suppressed(.nonProductionBuild)` for both development and test environments. This prevents those builds from consuming a snooze or skip token or presenting the update prompt during testing.
 
 Inspect ``UpdateChecker/lastOutcome`` after a check to confirm what the pipeline returned:
 
@@ -88,7 +104,7 @@ if case .suppressed(let reason) = checker.lastOutcome {
 
 ## Bypassing the Production Gate
 
-To exercise the full pipeline on a non-production build — the Simulator, with a debugger attached, or in TestFlight — set `shouldBypassProductionBuildCheck: true` in your configuration:
+To exercise the full pipeline in a development or test environment, set `shouldBypassProductionBuildCheck: true` in your configuration:
 
 ```swift
 let configuration = UpdateCheckConfiguration(
@@ -99,9 +115,9 @@ let configuration = UpdateCheckConfiguration(
 
 The production-build check is skipped and the pipeline proceeds to the network request. The throttle, compatibility, release age, and policy checks still apply. Do not ship this flag enabled.
 
-## Testing on a Real Device
+## Testing the Pipeline
 
-To exercise the full eleven-gate pipeline, run a device build without an attached debugger. The production gate passes, and the pipeline proceeds through the remaining ten gates.
+An App Store production build proceeds through the full eleven-gate pipeline. During development or TestFlight testing, enable `shouldBypassProductionBuildCheck` to exercise the same remaining gates.
 
 Use ``UpdateChecker/check(shouldBypassThrottle:)`` with `shouldBypassThrottle: true` to bypass the throttle gate and force a network request regardless of when the last check ran:
 
