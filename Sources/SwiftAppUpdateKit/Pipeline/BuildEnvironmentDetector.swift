@@ -9,6 +9,23 @@ import Foundation
 import OSLog
 import StoreKit
 
+// MARK: - Environment
+
+/// The distribution environment of the running app.
+public enum AppBuildEnvironment: Equatable, Sendable {
+    /// An App Store production build.
+    case production
+    /// A sandbox build, including TestFlight.
+    case test
+    /// A build running from Xcode, in the Simulator, or with a debugger attached.
+    case development
+
+    /// Detects the distribution environment of the running app.
+    public static func current() async -> AppBuildEnvironment {
+        return await AppStoreBuildEnvironmentDetector().environment()
+    }
+}
+
 // MARK: - Protocol
 
 protocol BuildEnvironmentDetector: Sendable {
@@ -26,28 +43,34 @@ struct BuildEnvironmentDetectionStrategy {
     /// is unavailable.
     let fetchAppTransactionEnvironment: @Sendable () async throws -> AppStore.Environment
 
-    func isProductionBuild() async -> Bool {
+    func environment() async -> AppBuildEnvironment {
         if self.isRunningInSimulator {
             Logger.buildEnvironmentDetector.info("[\(Self.self)] \(#function): Running in Simulator")
-            return false
+            return .development
         }
         if self.isDebuggerAttached {
             Logger.buildEnvironmentDetector.info("[\(Self.self)] \(#function): Debugger attached")
-            return false
+            return .development
         }
         do {
             let environment = try await self.fetchAppTransactionEnvironment()
             Logger.buildEnvironmentDetector.info(
                 "[\(Self.self)] \(#function): App transaction environment: \(String(describing: environment), privacy: .public)"
             )
-            return environment == .production
+            if environment == .production {
+                return .production
+            }
+            if environment == .xcode {
+                return .development
+            }
+            return .test
         } catch {
             // Fail toward production: disabling checking for all users on a lookup
             // failure would be worse than emitting a redundant prompt in a TestFlight build.
             Logger.buildEnvironmentDetector.error(
                 "[\(Self.self)] \(#function): App transaction environment lookup failed: \(String(describing: error), privacy: .public). Treating as a production build."
             )
-            return true
+            return .production
         }
     }
 }
@@ -58,6 +81,10 @@ struct BuildEnvironmentDetectionStrategy {
 /// and inspects the running process for simulator and debugger conditions.
 struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
     func isProductionBuild() async -> Bool {
+        return await self.environment() == .production
+    }
+
+    func environment() async -> AppBuildEnvironment {
         return await BuildEnvironmentDetectionStrategy(
             isRunningInSimulator: Self.isRunningInSimulator,
             isDebuggerAttached: Self.isDebuggerCurrentlyAttached(),
@@ -71,7 +98,7 @@ struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
                 }
             }
         )
-        .isProductionBuild()
+        .environment()
     }
 
     private static var isRunningInSimulator: Bool {
