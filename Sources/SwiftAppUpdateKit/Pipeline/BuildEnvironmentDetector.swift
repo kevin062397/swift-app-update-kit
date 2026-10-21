@@ -17,7 +17,8 @@ public enum AppBuildEnvironment: Equatable, Sendable {
     case production
     /// A sandbox build, including TestFlight.
     case test
-    /// A build running from Xcode, in the Simulator, or with a debugger attached.
+    /// A debug build, a build running in the Simulator or with a debugger attached,
+    /// or a build reported by StoreKit as originating from Xcode.
     case development
 
     /// Detects the distribution environment of the running app.
@@ -37,6 +38,7 @@ protocol BuildEnvironmentDetector: Sendable {
 /// The build environment detection logic with injectable step functions, so every
 /// branch is testable without a real StoreKit session or a running debugger.
 struct BuildEnvironmentDetectionStrategy {
+    let isDebugBuild: Bool
     let isRunningInSimulator: Bool
     let isDebuggerAttached: Bool
     /// Returns the App Store server environment, or throws when the app transaction
@@ -44,6 +46,10 @@ struct BuildEnvironmentDetectionStrategy {
     let fetchAppTransactionEnvironment: @Sendable () async throws -> AppStore.Environment
 
     func environment() async -> AppBuildEnvironment {
+        if self.isDebugBuild {
+            Logger.buildEnvironmentDetector.info("[\(Self.self)] \(#function): DEBUG compilation condition enabled")
+            return .development
+        }
         if self.isRunningInSimulator {
             Logger.buildEnvironmentDetector.info("[\(Self.self)] \(#function): Running in Simulator")
             return .development
@@ -82,6 +88,7 @@ struct BuildEnvironmentDetectionStrategy {
 struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
     func currentEnvironment() async -> AppBuildEnvironment {
         return await BuildEnvironmentDetectionStrategy(
+            isDebugBuild: Self.isDebugBuild,
             isRunningInSimulator: Self.isRunningInSimulator,
             isDebuggerAttached: Self.isDebuggerCurrentlyAttached(),
             fetchAppTransactionEnvironment: {
@@ -95,6 +102,14 @@ struct AppStoreBuildEnvironmentDetector: BuildEnvironmentDetector {
             }
         )
         .environment()
+    }
+
+    private static var isDebugBuild: Bool {
+        #if DEBUG
+            return true
+        #else
+            return false
+        #endif
     }
 
     private static var isRunningInSimulator: Bool {

@@ -59,8 +59,8 @@ public struct UpdateCheckConfiguration: Sendable {
     /// - Important:
     /// A small value increases the risk of directing users to a version not yet available for download.
     public let minimumReleaseAge: TimeInterval
-    /// When `true`, the production-build gate is skipped and checks run in the simulator,
-    /// under a debugger, and in TestFlight builds. Defaults to `false`.
+    /// When `true`, the production-build gate is skipped and checks run in development
+    /// and test builds. Defaults to `false`.
     ///
     /// Set this to `true` in a development or test configuration to exercise the full pipeline
     /// on a device without a production build. Do not enable in a configuration you ship to users.

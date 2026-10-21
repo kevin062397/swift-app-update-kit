@@ -54,7 +54,7 @@ extension LookupRequestError {
 /// Each case carries the data you need to answer why a prompt did not appear.
 /// Read ``UpdateChecker/lastOutcome`` and match on `.suppressed` to inspect it.
 public enum SuppressionReason: Equatable, Sendable {
-    /// The check ran in a non-production build — simulator, debugger-attached, or TestFlight.
+    /// The check ran in a development or test build.
     case nonProductionBuild
     /// The configured throttle interval has not elapsed since the last successful check.
     case throttled(nextEligibleDate: Date)

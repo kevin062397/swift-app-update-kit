@@ -74,13 +74,13 @@ UpdatePromptView(
 
 SwiftAppUpdateKit classifies the running app as one of three ``AppBuildEnvironment`` values:
 
-| Environment                         | Applies to                                                                                       |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
-| ``AppBuildEnvironment/development`` | The Simulator, a debugger-attached process, or an app transaction reported by StoreKit as Xcode. |
-| ``AppBuildEnvironment/test``        | A StoreKit sandbox app transaction, including TestFlight.                                        |
-| ``AppBuildEnvironment/production``  | An App Store production app transaction.                                                         |
+| Environment                         | Applies to                                                                                                        |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| ``AppBuildEnvironment/development`` | A `DEBUG` build, the Simulator, a debugger-attached process, or an app transaction reported by StoreKit as Xcode. |
+| ``AppBuildEnvironment/test``        | A StoreKit sandbox app transaction, including TestFlight.                                                         |
+| ``AppBuildEnvironment/production``  | An App Store production app transaction.                                                                          |
 
-Simulator and debugger detection take precedence over the StoreKit lookup. If StoreKit cannot provide the app transaction environment, classification falls back to ``AppBuildEnvironment/production`` so an unavailable lookup does not disable update checking for App Store users.
+The `DEBUG` compilation condition, Simulator, and debugger detection take precedence over the StoreKit lookup. If StoreKit cannot provide the app transaction environment, classification falls back to ``AppBuildEnvironment/production`` so an unavailable lookup does not disable update checking for App Store users.
 
 Read the current classification asynchronously when your integration needs to label diagnostics or adapt development tooling:
 
@@ -98,7 +98,7 @@ checker.checkAtLaunch()
 // After the check completes:
 if case .suppressed(let reason) = checker.lastOutcome {
     print("Suppressed: \(reason)")
-    // → Suppressed: nonProductionBuild  (in Simulator or with debugger)
+    // → Suppressed: nonProductionBuild
 }
 ```
 

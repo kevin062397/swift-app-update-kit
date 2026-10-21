@@ -20,6 +20,7 @@ private actor EnvironmentLookupCounter {
 
 struct BuildEnvironmentDetectorTests {
     private func makeStrategy(
+        isDebugBuild: Bool = false,
         isRunningInSimulator: Bool = false,
         isDebuggerAttached: Bool = false,
         environment: AppStore.Environment = .production,
@@ -27,6 +28,7 @@ struct BuildEnvironmentDetectorTests {
         lookupCounter: EnvironmentLookupCounter? = nil
     ) -> BuildEnvironmentDetectionStrategy {
         BuildEnvironmentDetectionStrategy(
+            isDebugBuild: isDebugBuild,
             isRunningInSimulator: isRunningInSimulator,
             isDebuggerAttached: isDebuggerAttached,
             fetchAppTransactionEnvironment: {
@@ -37,6 +39,14 @@ struct BuildEnvironmentDetectorTests {
                 return environment
             }
         )
+    }
+
+    @Test func debugBuildIsDevelopmentWithoutEnvironmentLookup() async {
+        let lookupCounter = EnvironmentLookupCounter()
+        let strategy = self.makeStrategy(isDebugBuild: true, lookupCounter: lookupCounter)
+
+        #expect(await strategy.environment() == .development)
+        #expect(await lookupCounter.count == 0)
     }
 
     @Test func simulatorBuildIsDevelopmentWithoutEnvironmentLookup() async {
